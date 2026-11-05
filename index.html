@@ -232,7 +232,7 @@ function compute(data){
   const ag = latestBy(events, "agent.status", e => e.entity);
   const agents = AGENTS.map(([slug, name]) => {
     const e = ag.get("agent:" + slug);
-    if (!e) return {slug, name, level:"gray", state:"no status yet", text:"", age:null, silent:true};
+    if (!e) return {slug, name, level:"gray", state:"no status yet", text:"Waiting for the first agent.status event", age:null, silent:true};
     const silent = now - e.t > SILENT_MS;
     const st = e.details?.state || "";
     return {slug, name, level: silent ? "gray" : e.level, state: st, text: e.summary, needs: e.details?.needs, task: e.details?.task, age: now - e.t, silent};
@@ -337,7 +337,7 @@ function render(s){
   $("agent-lines").innerHTML = s.agents.map(a => `
     <div class="line ${a.silent ? "stale" : ""}"><span class="sw ${a.level}"></span>
       <div><div class="t">${esc(a.name)} <span class="pill ${a.level}">${esc(a.silent && a.age !== null ? "silent" : a.state)}</span></div>
-      <div class="s">${esc(a.text || (a.age === null ? "No status yet" : ""))}${a.needs && !a.silent ? "<br>Needs: " + esc(a.needs) : ""}</div></div>
+      <div class="s">${esc(a.text)}${a.needs && !a.silent ? "<br>Needs: " + esc(a.needs) : ""}</div></div>
       <div class="age">${a.age === null ? "" : ago(a.age)}</div></div>`).join("");
 
   // Feed

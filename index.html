@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">
+<title>Paragon World</title>
+<style>
+:root{
+  --bg:#f6f5f2;--card:#ffffff;--ink:#1c1b19;--muted:#6b6862;--line:#e6e3dd;
+  --info:#3b6fd6;--good:#1f9d55;--warn:#d98b0b;--bad:#d7342c;--gray:#a3a09a;
+  --info-bg:#e9f0fc;--good-bg:#e6f6ec;--warn-bg:#fdf1dc;--bad-bg:#fbe5e3;--gray-bg:#efeeeb;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121311;--card:#1c1d1a;--ink:#ecebe7;--muted:#9a978f;--line:#2b2c28;
+  --info:#7aa2f7;--good:#4cc27a;--warn:#f2b544;--bad:#f06a60;--gray:#6e6c67;
+  --info-bg:#1c2538;--good-bg:#162b1f;--warn-bg:#33270f;--bad-bg:#3a1a18;--gray-bg:#24241f;
+}}
+:root[data-theme="dark"]{
+  --bg:#121311;--card:#1c1d1a;--ink:#ecebe7;--muted:#9a978f;--line:#2b2c28;
+  --info:#7aa2f7;--good:#4cc27a;--warn:#f2b544;--bad:#f06a60;--gray:#6e6c67;
+  --info-bg:#1c2538;--good-bg:#162b1f;--warn-bg:#33270f;--bad-bg:#3a1a18;--gray-bg:#24241f;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}
+main{max-width:640px;margin:0 auto;padding:12px 16px calc(32px + env(safe-area-inset-bottom))}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:8px 0 4px}
+h1{font-size:18px;margin:0;letter-spacing:.01em}
+.live{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--gray);display:inline-block}
+.dot.on{background:var(--good);animation:pulse 2s infinite}
+.dot.err{background:var(--bad)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:12px 0}
+h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px}
+.big{font-size:44px;font-weight:700;line-height:1;margin:2px 0 6px}
+.sub{color:var(--muted);font-size:14px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}
+.row .name{font-weight:600;flex:0 0 auto}
+.row .val{text-align:right}
+.row .val b{font-size:18px}
+.line{display:grid;grid-template-columns:12px 1fr auto;gap:10px;align-items:start;padding:9px 0;border-top:1px solid var(--line)}
+.line:first-of-type{border-top:0}
+.sw{width:12px;height:12px;border-radius:50%;margin-top:5px;background:var(--gray)}
+.sw.info{background:var(--info)}.sw.good{background:var(--good)}.sw.warn{background:var(--warn)}.sw.bad{background:var(--bad)}.sw.gray{background:var(--gray)}
+.line .t{font-weight:600}
+.line .s{color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.line .age{color:var(--muted);font-size:12px;white-space:nowrap;margin-top:3px}
+.line.stale .t,.line.stale .s{color:var(--gray)}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--gray-bg);color:var(--gray);vertical-align:middle}
+.pill.info{background:var(--info-bg);color:var(--info)}.pill.good{background:var(--good-bg);color:var(--good)}.pill.warn{background:var(--warn-bg);color:var(--warn)}.pill.bad{background:var(--bad-bg);color:var(--bad)}
+.pill.demo{background:var(--gray-bg);color:var(--muted);font-weight:500}
+.roas{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.roas .big{font-size:36px}
+.refs{display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:13px;margin-top:6px}
+.refs b{color:var(--ink)}
+.feed .ev{padding:9px 0;border-top:1px solid var(--line);display:grid;grid-template-columns:12px 1fr;gap:10px}
+.feed .ev:first-child{border-top:0}
+.feed .ev .m{color:var(--muted);font-size:12px;display:flex;gap:8px;flex-wrap:wrap}
+.feed .ev .x{overflow-wrap:anywhere}
+.feed .ev.demo .x{color:var(--muted)}
+.feed .ev.new{animation:flash 2.4s ease-out}
+@keyframes flash{0%{background:var(--good-bg)}100%{background:transparent}}
+.empty{color:var(--muted);font-size:14px;padding:6px 0}
+.note{color:var(--muted);font-size:12px;margin-top:8px}
+footer{color:var(--muted);font-size:12px;text-align:center;padding:12px 0}
+.err{background:var(--bad-bg);color:var(--bad);padding:10px 12px;border-radius:10px;font-size:14px;margin:12px 0;display:none}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Paragon World</h1>
+    <div class="live"><span class="dot" id="dot"></span><span id="livetxt">connecting</span></div>
+  </header>
+  <div class="err" id="err"></div>
+
+  <section id="needs">
+    <h2>Needs you</h2>
+    <div class="big" id="needs-n">–</div>
+    <div class="sub" id="needs-s">loading</div>
+  </section>
+
+  <section id="today">
+    <h2>Today <span class="sub" id="today-date"></span></h2>
+    <div id="today-rows"></div>
+    <div class="row"><span class="name">Status preorder backlog</span><span class="val" id="backlog">–</span></div>
+  </section>
+
+  <section id="meta">
+    <h2>Meta · 7-day ROAS</h2>
+    <div id="meta-body"></div>
+  </section>
+
+  <section id="districts">
+    <h2>Districts</h2>
+    <div id="district-lines"></div>
+  </section>
+
+  <section id="titles">
+    <h2>Titles</h2>
+    <div id="title-lines"></div>
+  </section>
+
+  <section id="agents">
+    <h2>Agents</h2>
+    <div id="agent-lines"></div>
+  </section>
+
+  <section class="feed">
+    <h2>Latest events</h2>
+    <div id="feed"></div>
+  </section>
+  <footer id="foot"></footer>
+</main>
+
+<script>
+(() => {
+"use strict";
+// ---------- Reference data (Entities v1) ----------
+const LA = "America/Los_Angeles";
+const DISTRICTS = [
+  ["design-studio","Design studio","manual"],
+  ["art-creative","Art & creative","manual"],
+  ["production","Production","manual"],
+  ["freight","Freight & customs","manual"],
+  ["warehouse","Warehouse / 3PL","stock"],
+  ["sales","Sales","sales"],
+  ["crowdfunding","Crowdfunding","manual"],
+  ["marketing","Marketing","roas"],
+  ["customer-service","Customer service","manual"],
+  ["finance","Finance","manual"],
+  ["legal","Legal & compliance","manual"],
+  ["agent-hq","Agent HQ","agents"],
+];
+const TITLES = [["status","Status: A Victorian Affair"],["trade-and-triumph","Trade and Triumph"],["catacombes-de-paris","Catacombes de Paris"]];
+const STAGES = {concept:"Concept",prototype:"Prototype",playtesting:"Playtesting",art:"Art & graphic design",rulebook:"Rulebook & localization",manufacturing:"Manufacturing",freight:"Freight",launch:"Launch",evergreen:"Evergreen",retired:"Retired"};
+const AGENTS = [["claude","Claude"],["chatgpt","ChatGPT / Codex"],["grokbot","Grokbot"]];
+const CHANNELS = [["shopify","Shopify"],["amazon","Amazon"]];
+const STALE_MS = 7*24*3600e3, SILENT_MS = 24*3600e3;
+const POLL_MS = 15000;
+
+// ---------- Helpers ----------
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const money = (n) => "$" + Number(n || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const laDate = (d) => new Intl.DateTimeFormat("en-CA",{timeZone:LA,year:"numeric",month:"2-digit",day:"2-digit"}).format(d);
+function laDaysBack(n, now){ // last n LA calendar days ending today, as YYYY-MM-DD
+  const [y,m,d] = laDate(now).split("-").map(Number);
+  const out = [];
+  for (let i=0;i<n;i++){ const t = new Date(Date.UTC(y,m-1,d-i)); out.push(t.toISOString().slice(0,10)); }
+  return out;
+}
+function ago(ms){
+  const s = Math.max(0, Math.round(ms/1000));
+  if (s < 60) return s + "s ago";
+  const m = Math.round(s/60); if (m < 60) return m + "m ago";
+  const h = Math.round(m/60); if (h < 48) return h + "h ago";
+  return Math.round(h/24) + "d ago";
+}
+const num = (v) => (v === null || v === undefined || v === "" || isNaN(Number(v))) ? null : Number(v);
+
+// Latest non-demo snapshot per key, among events of one type.
+function latestBy(events, type, keyFn){
+  const m = new Map();
+  for (const e of events){
+    if (e.type !== type || e.demo) continue;
+    const k = keyFn(e); if (!k) continue;
+    const prev = m.get(k);
+    if (!prev || e.t > prev.t) m.set(k, e);
+  }
+  return m;
+}
+
+// ---------- Compute ----------
+function compute(data){
+  const now = new Date(data.now);
+  const events = data.events.map(e => ({...e, t: Date.parse(e.ts)})).filter(e => !isNaN(e.t));
+  events.sort((a,b) => b.t - a.t);
+  const settings = data.settings || {};
+  const netFactor = num(settings.net_factor) ?? 0.775;
+  const fixedDaily = num(settings.fixed_daily_usd) ?? 595;
+
+  // Orders today (LA) and last 7 LA days, demo excluded.
+  const today = laDate(now);
+  const week = new Set(laDaysBack(7, now));
+  const orders = events.filter(e => e.type === "order.created" && !e.demo);
+  const todayByChannel = {};
+  for (const [slug] of CHANNELS) todayByChannel[slug] = {orders:0, revenue:0, preorders:0};
+  let shopifyWeekSales = 0;
+  for (const o of orders){
+    const d = laDate(new Date(o.t));
+    const total = num(o.details?.total) ?? 0;
+    if (d === today && todayByChannel[o.source]){
+      const c = todayByChannel[o.source];
+      c.orders += 1; c.revenue += total;
+      if (o.details?.fulfillment === "preorder") c.preorders += 1;
+    }
+    if (o.source === "shopify" && week.has(d)) shopifyWeekSales += total;
+  }
+
+  // Preorder backlog: latest Shopify inventory.level for Status, details.committed.
+  const inv = latestBy(events, "inventory.level", e => (e.entity||"") + "@" + (e.details?.location||""));
+  const statusShopify = inv.get("title:status@shopify");
+  const backlog = statusShopify ? num(statusShopify.details?.committed) : null;
+
+  // Meta 7-day ROAS. ads.daily is a snapshot per day (details.date, LA).
+  const ads = latestBy(events, "ads.daily", e => e.details?.date || laDate(new Date(e.t)));
+  let spend = 0, views = 0, adDays = 0;
+  for (const [date, e] of ads){ if (!week.has(date)) continue; adDays++; spend += num(e.details?.spend) ?? 0; views += num(e.details?.views) ?? 0; }
+  let meta = null;
+  if (ads.size > 0){
+    const roas = spend > 0 ? shopifyWeekSales / spend : null;
+    const cpv = views > 0 ? spend / views : null;
+    let gate = "gray";
+    if (roas !== null){
+      if (roas < 1.6) gate = "bad";
+      else if (roas < 2.2) gate = "warn";
+      else if (cpv !== null && cpv >= 1.5) gate = "warn";
+      else gate = "good";
+    }
+    const metaDaily = adDays > 0 ? spend / adDays : 0;
+    const marginal = 1 / netFactor;
+    const full = metaDaily > 0 ? (metaDaily + fixedDaily) / (netFactor * metaDaily) : null;
+    meta = {roas, cpv, gate, spend, views, adDays, sales: shopifyWeekSales, marginal, full, metaDaily};
+  }
+
+  // Agents: latest agent.status per agent; silent after 24h.
+  const ag = latestBy(events, "agent.status", e => e.entity);
+  const agents = AGENTS.map(([slug, name]) => {
+    const e = ag.get("agent:" + slug);
+    if (!e) return {slug, name, level:"gray", state:"no status yet", text:"", age:null, silent:true};
+    const silent = now - e.t > SILENT_MS;
+    const st = e.details?.state || "";
+    return {slug, name, level: silent ? "gray" : e.level, state: st, text: e.summary, needs: e.details?.needs, task: e.details?.task, age: now - e.t, silent};
+  });
+
+  // Districts.
+  const ds = latestBy(events, "district.status", e => e.place);
+  const districts = DISTRICTS.map(([slug, name, kind]) => {
+    const e = ds.get(slug);
+    if (kind === "manual"){
+      if (!e) return {slug, name, level:"gray", text:"No status line yet", age:null, stale:true};
+      const stale = now - e.t > STALE_MS;
+      return {slug, name, level: stale ? "gray" : e.level, text: e.summary, age: now - e.t, stale};
+    }
+    if (kind === "sales"){
+      const n = Object.values(todayByChannel).reduce((a,c) => a + c.orders, 0);
+      const r = Object.values(todayByChannel).reduce((a,c) => a + c.revenue, 0);
+      return {slug, name, level:"info", text: n + (n === 1 ? " order" : " orders") + " today, " + money(r), age:null, stale:false};
+    }
+    if (kind === "roas"){
+      if (!meta) return {slug, name, level:"gray", text:"No Meta data yet", age:null, stale:true};
+      return {slug, name, level: meta.gate, text: meta.roas === null ? "No spend in the last 7 days" : "7-day ROAS " + meta.roas.toFixed(2), age:null, stale:false};
+    }
+    if (kind === "agents"){
+      const live = agents.filter(a => !a.silent);
+      if (!live.length) return {slug, name, level:"gray", text:"No agent status in 24h", age:null, stale:true};
+      const lv = live.some(a => a.state === "blocked") ? "bad" : live.some(a => a.state === "waiting") ? "warn" : live.some(a => a.state === "working") ? "good" : "info";
+      const parts = ["working","waiting","blocked","idle"].map(s => [s, live.filter(a => a.state === s).length]).filter(([,n]) => n).map(([s,n]) => n + " " + s);
+      return {slug, name, level: lv, text: parts.join(", ") || "idle", age:null, stale:false};
+    }
+    if (kind === "stock"){
+      const snaps = [...inv.values()];
+      if (!snaps.length) return {slug, name, level:"gray", text: e ? e.summary : "No inventory snapshot yet", age: e ? now - e.t : null, stale:true};
+      const order = {bad:3, warn:2, good:1, info:0};
+      const worst = snaps.reduce((w, s) => (order[s.level] ?? 0) > (order[w.level] ?? 0) ? s : w, snaps[0]);
+      const newest = snaps.reduce((a, s) => s.t > a.t ? s : a, snaps[0]);
+      return {slug, name, level: worst.level, text: snaps.map(s => s.summary).join(" · "), age: now - newest.t, stale:false};
+    }
+  });
+
+  // Titles.
+  const ts = latestBy(events, "title.stage", e => e.entity);
+  const titles = TITLES.map(([slug, name]) => {
+    const e = ts.get("title:" + slug);
+    return {slug, name, stage: e ? (STAGES[e.details?.stage] || e.details?.stage || e.summary) : "No stage yet", level: e ? "info" : "gray", age: e ? now - e.t : null};
+  });
+
+  // Needs you: agents waiting or blocked, districts at warn or bad (current, not gray).
+  // Agent HQ is left out of the district count: its color comes from the same agents.
+  const needAgents = agents.filter(a => !a.silent && (a.state === "waiting" || a.state === "blocked"));
+  const needDistricts = districts.filter(d => d.slug !== "agent-hq" && (d.level === "warn" || d.level === "bad"));
+  const needs = {n: needAgents.length + needDistricts.length, agents: needAgents, districts: needDistricts};
+
+  return {now, today, events, todayByChannel, backlog, backlogAge: statusShopify ? now - statusShopify.t : null, meta, agents, districts, titles, needs};
+}
+
+// ---------- Render ----------
+const seen = new Set(); let firstRender = true;
+function render(s){
+  // Needs you
+  $("needs-n").textContent = s.needs.n;
+  $("needs-n").style.color = s.needs.n ? "var(--warn)" : "var(--good)";
+  const bits = [...s.needs.agents.map(a => a.name + ": " + a.state + (a.needs ? " · " + a.needs : "")), ...s.needs.districts.map(d => d.name + " " + (d.level === "bad" ? "(bad)" : "(warn)"))];
+  $("needs-s").textContent = s.needs.n ? bits.join(" · ") : "Nothing waiting on you";
+
+  // Today
+  $("today-date").textContent = "· " + new Date(s.now).toLocaleDateString("en-US",{timeZone:LA,weekday:"short",month:"short",day:"numeric"}) + " LA";
+  $("today-rows").innerHTML = CHANNELS.map(([slug, name]) => {
+    const c = s.todayByChannel[slug];
+    const extra = slug === "shopify" && c.preorders ? `<div class="sub">${c.preorders} preorder${c.preorders === 1 ? "" : "s"}</div>` : "";
+    return `<div class="row"><span class="name">${name}</span><span class="val"><b>${c.orders}</b> ${c.orders === 1 ? "order" : "orders"} · ${money(c.revenue)}${extra}</span></div>`;
+  }).join("");
+  $("backlog").innerHTML = s.backlog === null ? `<span class="sub">no Shopify inventory snapshot yet</span>` : `<b>${s.backlog.toLocaleString("en-US")}</b> open <span class="sub">· ${ago(s.backlogAge)}</span>`;
+
+  // Meta
+  const m = s.meta;
+  if (!m){
+    $("meta-body").innerHTML = `<div class="empty">No Meta data yet. The Marketing line stays gray until the first ads.daily event arrives.</div>`;
+  } else {
+    const roasTxt = m.roas === null ? "–" : m.roas.toFixed(2);
+    const label = {bad:"Step down", warn:"Hold", good:"Step up", gray:"No spend"}[m.gate];
+    $("meta-body").innerHTML = `
+      <div class="roas"><div class="big">${roasTxt}</div><span class="pill ${m.gate}">${label}</span></div>
+      <div class="sub">${money(m.sales)} Shopify sales / ${money(m.spend)} Meta spend over the last 7 LA days (${m.adDays} day${m.adDays === 1 ? "" : "s"} of Meta data)${m.cpv !== null ? " · " + money(m.cpv) + " per view" : ""}</div>
+      <div class="refs"><span>Marginal break-even <b>${m.marginal.toFixed(2)}</b></span><span>Full-cost target <b>${m.full === null ? "–" : m.full.toFixed(2)}</b></span></div>
+      <div class="note">Assumes a clean week. Gate: below 1.6 step down, 1.6 to 2.2 hold, 2.2+ step up unless cost per view is $1.50 or more.</div>`;
+  }
+
+  // Districts
+  $("district-lines").innerHTML = s.districts.map(d => `
+    <div class="line ${d.stale ? "stale" : ""}"><span class="sw ${d.level}"></span>
+      <div><div class="t">${esc(d.name)}</div><div class="s">${esc(d.text)}</div></div>
+      <div class="age">${d.age === null ? "" : ago(d.age)}</div></div>`).join("");
+
+  // Titles
+  $("title-lines").innerHTML = s.titles.map(t => `
+    <div class="line"><span class="sw ${t.level}"></span>
+      <div><div class="t">${esc(t.name)}</div><div class="s">${esc(t.stage)}</div></div>
+      <div class="age">${t.age === null ? "" : ago(t.age)}</div></div>`).join("");
+
+  // Agents
+  $("agent-lines").innerHTML = s.agents.map(a => `
+    <div class="line ${a.silent ? "stale" : ""}"><span class="sw ${a.level}"></span>
+      <div><div class="t">${esc(a.name)} <span class="pill ${a.level}">${esc(a.silent && a.age !== null ? "silent" : a.state)}</span></div>
+      <div class="s">${esc(a.text || (a.age === null ? "No status yet" : ""))}${a.needs && !a.silent ? "<br>Needs: " + esc(a.needs) : ""}</div></div>
+      <div class="age">${a.age === null ? "" : ago(a.age)}</div></div>`).join("");
+
+  // Feed
+  const feed = s.events.slice(0, 30);
+  $("feed").innerHTML = feed.map(e => {
+    const isNew = !firstRender && !seen.has(e.id);
+    return `<div class="ev ${e.demo ? "demo" : ""} ${isNew ? "new" : ""}"><span class="sw ${e.level}"></span>
+      <div><div class="x">${e.demo ? '<span class="pill demo">demo</span> ' : ""}${esc(e.summary)}</div>
+      <div class="m"><span>${ago(s.now - e.t)}</span><span>${esc(e.source)}</span><span>${esc(e.type)}</span><span>${esc(e.place)}</span></div></div></div>`;
+  }).join("") || `<div class="empty">No events yet.</div>`;
+  for (const e of s.events) seen.add(e.id);
+  firstRender = false;
+  $("foot").textContent = s.events.length + " events loaded · demo events shown but never counted";
+}
+
+// ---------- Live loop (swap this block for a Realtime subscription later) ----------
+// The key rides in the URL fragment (#k=...), which the browser never sends to the host.
+// A ?k= query string is accepted too and moved into the fragment on load.
+const DATA_URL = "https://erxmyapfgytaztmpzxsh.supabase.co/functions/v1/world";
+let key = new URLSearchParams(location.hash.replace(/^#/, "")).get("k") || "";
+if (!key) {
+  const q = new URLSearchParams(location.search);
+  key = q.get("k") || "";
+  if (key) { try { history.replaceState(null, "", location.pathname + "#k=" + encodeURIComponent(key)); } catch (_) {} }
+}
+let lastOk = 0, timer = null, inflight = false, fails = 0;
+function setLive(state, txt){ const d = $("dot"); d.className = "dot " + state; $("livetxt").textContent = txt; }
+async function load(){
+  if (inflight) return; inflight = true;
+  try {
+    const r = await fetch(DATA_URL + "?k=" + encodeURIComponent(key) + "&data=1", {cache:"no-store"});
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const data = await r.json();
+    render(compute(data));
+    lastOk = Date.now(); fails = 0;
+    $("err").style.display = "none";
+    setLive("on", "live");
+  } catch (e) {
+    fails++;
+    if (!lastOk) { $("err").textContent = key ? "Could not load the events (" + (e && e.message || e) + "). Check the link." : "No key in the link. Open the page with #k=<your key>."; $("err").style.display = "block"; }
+    setLive("err", lastOk ? "retrying" : "no data");
+  } finally { inflight = false; }
+}
+function tick(){ if (document.visibilityState === "visible") load(); }
+function start(){ stop(); tick(); timer = setInterval(tick, POLL_MS); }
+function stop(){ if (timer) clearInterval(timer); timer = null; }
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") start(); else stop(); });
+setInterval(() => { if (lastOk && !fails) $("livetxt").textContent = "live · " + ago(Date.now() - lastOk); }, 5000);
+start();
+})();
+</script>
+</body>
+</html>

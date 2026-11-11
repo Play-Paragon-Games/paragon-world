@@ -88,6 +88,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;padding:12px 0}
     <h2>Today <span class="sub" id="today-date"></span></h2>
     <div id="today-rows"></div>
     <div class="row"><span class="name">Status preorder backlog</span><span class="val" id="backlog">–</span></div>
+    <div class="row"><span class="name">Games to ship<div class="sub">Shopify + Kickstarter</div></span><span class="val" id="toship">–</span></div>
   </section>
 
   <section id="meta">
@@ -190,22 +191,32 @@ function compute(data){
   const orders = events.filter(e => e.type === "order.created" && !e.demo);
   const todayByChannel = {};
   for (const [slug] of CHANNELS) todayByChannel[slug] = {orders:0, revenue:0, preorders:0};
-  let shopifyWeekSales = 0;
+  // ROAS sales leave out All-In upgrade invoices (details.upgrade_of): extra payments on orders already counted.
+  let shopifyWeekSales = 0, weekUpgradeSales = 0, weekUpgrades = 0;
   for (const o of orders){
     const d = laDate(new Date(o.t));
     const total = num(o.details?.total) ?? 0;
+    const isUpgrade = !!o.details?.upgrade_of;
     if (d === today && todayByChannel[o.source]){
       const c = todayByChannel[o.source];
       c.orders += 1; c.revenue += total;
       if (o.details?.fulfillment === "preorder") c.preorders += 1;
     }
-    if (o.source === "shopify" && week.has(d)) shopifyWeekSales += total;
+    if (o.source === "shopify" && week.has(d)){
+      if (isUpgrade) { weekUpgradeSales += total; weekUpgrades += 1; } else shopifyWeekSales += total;
+    }
   }
 
   // Preorder backlog: latest Shopify inventory.level for Status, details.committed.
   const inv = latestBy(events, "inventory.level", e => (e.entity||"") + "@" + (e.details?.location||""));
   const statusShopify = inv.get("title:status@shopify");
   const backlog = statusShopify ? num(statusShopify.details?.committed) : null;
+
+  // Games to ship: Shopify base-game copies (all-time sum of details.base_games for Status, from the
+  // world function's totals) plus the Kickstarter copies (settings.kickstarter_copies).
+  const shopifyGames = num(data.totals?.status_base_games);
+  const ksGames = num(settings.kickstarter_copies);
+  const toShip = shopifyGames === null ? null : {shopify: shopifyGames, kickstarter: ksGames ?? 0, total: shopifyGames + (ksGames ?? 0), ksKnown: ksGames !== null};
 
   // Meta 7-day ROAS. ads.daily is a snapshot per day (details.date, LA).
   const ads = latestBy(events, "ads.daily", e => e.details?.date || laDate(new Date(e.t)));
@@ -225,7 +236,7 @@ function compute(data){
     const metaDaily = adDays > 0 ? spend / adDays : 0;
     const marginal = 1 / netFactor;
     const full = metaDaily > 0 ? (metaDaily + fixedDaily) / (netFactor * metaDaily) : null;
-    meta = {roas, cpv, gate, spend, views, adDays, sales: shopifyWeekSales, marginal, full, metaDaily};
+    meta = {roas, cpv, gate, spend, views, adDays, sales: shopifyWeekSales, upgradeSales: weekUpgradeSales, upgrades: weekUpgrades, marginal, full, metaDaily};
   }
 
   // Agents: latest agent.status per agent; silent after 24h.
@@ -286,7 +297,7 @@ function compute(data){
   const needDistricts = districts.filter(d => d.slug !== "agent-hq" && (d.level === "warn" || d.level === "bad"));
   const needs = {n: needAgents.length + needDistricts.length, agents: needAgents, districts: needDistricts};
 
-  return {now, today, events, todayByChannel, backlog, backlogAge: statusShopify ? now - statusShopify.t : null, meta, agents, districts, titles, needs};
+  return {now, today, events, todayByChannel, backlog, backlogAge: statusShopify ? now - statusShopify.t : null, toShip, meta, agents, districts, titles, needs};
 }
 
 // ---------- Render ----------
@@ -306,6 +317,9 @@ function render(s){
     return `<div class="row"><span class="name">${name}</span><span class="val"><b>${c.orders}</b> ${c.orders === 1 ? "order" : "orders"} · ${money(c.revenue)}${extra}</span></div>`;
   }).join("");
   $("backlog").innerHTML = s.backlog === null ? `<span class="sub">no Shopify inventory snapshot yet</span>` : `<b>${s.backlog.toLocaleString("en-US")}</b> open <span class="sub">· ${ago(s.backlogAge)}</span>`;
+  const ts = s.toShip;
+  $("toship").innerHTML = ts === null ? `<span class="sub">no base-game total from the world function</span>`
+    : `<b>${ts.total.toLocaleString("en-US")}</b><div class="sub">${ts.shopify.toLocaleString("en-US")} Shopify + ${ts.ksKnown ? ts.kickstarter.toLocaleString("en-US") + " Kickstarter" : "Kickstarter not set"}</div>`;
 
   // Meta
   const m = s.meta;
@@ -317,6 +331,7 @@ function render(s){
     $("meta-body").innerHTML = `
       <div class="roas"><div class="big">${roasTxt}</div><span class="pill ${m.gate}">${label}</span></div>
       <div class="sub">${money(m.sales)} Shopify sales / ${money(m.spend)} Meta spend over the last 7 LA days (${m.adDays} day${m.adDays === 1 ? "" : "s"} of Meta data)${m.cpv !== null ? " · " + money(m.cpv) + " per view" : ""}</div>
+      ${m.upgrades ? `<div class="sub">Left out: ${m.upgrades} All-In upgrade invoice${m.upgrades === 1 ? "" : "s"}, ${money(m.upgradeSales)}</div>` : ""}
       <div class="refs"><span>Marginal break-even <b>${m.marginal.toFixed(2)}</b></span><span>Full-cost target <b>${m.full === null ? "–" : m.full.toFixed(2)}</b></span></div>
       <div class="note">Assumes a clean week. Gate: below 1.6 step down, 1.6 to 2.2 hold, 2.2+ step up unless cost per view is $1.50 or more.</div>`;
   }

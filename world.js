@@ -24,6 +24,27 @@ const STAGE_ORDER = ["concept","prototype","playtesting","art","rulebook","manuf
 const AGENTS = [["claude","Claude"],["chatgpt","ChatGPT / Codex"],["grokbot","Grokbot"]];
 const CHANNELS = [["shopify","Shopify"],["amazon","Amazon"]];
 const STALE_MS = 7*24*3600e3, SILENT_MS = 24*3600e3;
+// Which district an agent is working in (board view: its meeple walks there). Event format v1 has no
+// district field on agent.status, so this reads details.task for a district's name or a known short form.
+// The earliest match in the task wins; no match means the agent stays on Agent HQ.
+const TASK_DISTRICT = [
+  ["customer-service", /\b(cs|customer|support|triage|refunds?|inbox|tickets?)\b/i],
+  ["marketing", /\b(meta|ads?|marketing|roas|campaigns?|mailchimp)\b/i],
+  ["sales", /\b(shopify|amazon|orders?|sales)\b/i],
+  ["finance", /\b(finance|bookkeep\w*|cash ?flow|wayflyer|tax\w*)\b/i],
+  ["freight", /\b(freight|customs|forwarder)\b/i],
+  ["warehouse", /\b(warehouse|3pl|inventory|fulfil\w*)\b/i],
+  ["production", /\b(production|manufactur\w*|printing|sky game|factory)\b/i],
+  ["crowdfunding", /\b(kickstarter|backerkit|backers?|crowdfunding|pledges?)\b/i],
+  ["legal", /\b(legal|contracts?|agreements?|compliance)\b/i],
+  ["design-studio", /\b(design studio|playtest\w*|rulebook|designer)\b/i],
+  ["art-creative", /\b(art|illustrat\w*|photos?)\b/i],
+];
+function taskDistrict(task){
+  let best = null, at = Infinity;
+  for (const [slug, re] of TASK_DISTRICT){ const m = re.exec(String(task || "")); if (m && m.index < at){ at = m.index; best = slug; } }
+  return best;
+}
 const STATUS_RUN1_UNITS = 5000; // Entities v1: Status run 1 at Sky Game. settings.status_run1_units overrides it if that row exists.
 const POLL_MS = 15000;
 
@@ -131,7 +152,8 @@ function compute(data){
     if (!e) return {slug, name, level:"gray", state:"no status yet", text:"Waiting for the first agent.status event", age:null, silent:true};
     const silent = now - e.t > SILENT_MS;
     const st = e.details?.state || "";
-    return {slug, name, level: silent ? "gray" : e.level, state: st, text: e.summary, needs: e.details?.needs, task: e.details?.task, age: now - e.t, silent, event: e};
+    return {slug, name, level: silent ? "gray" : e.level, state: st, text: e.summary, needs: e.details?.needs, task: e.details?.task, age: now - e.t, silent, event: e,
+      workingAt: !silent && st === "working" ? taskDistrict(e.details?.task) : null};
   });
 
   // Districts.

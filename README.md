@@ -1,6 +1,6 @@
 # Paragon World
 
-Live, read-only pages for Paragon Games. `board.html` is the board view (Phase 4) and `index.html` the plain
+Live, read-only pages for Paragon Games. `board.html` is the board view (Phase 4; 3D by default via `board3d.js` and the vendored three.js in `vendor/`, with a Flat toggle) and `index.html` the plain
 fallback page (Phase 3); both share `world.js` (reference data, compute, live loop). GitHub Pages serves them and they poll the
 `world` Supabase Edge Function (source in `supabase/functions/world/`) every 15 seconds while the tab is visible.
 

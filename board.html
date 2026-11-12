@@ -7,6 +7,7 @@
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
 <title>Paragon World · Board</title>
+<script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
 <style>
 :root{
   --bg:#ecebe6;--board:#f8f7f3;--card:#ffffff;--ink:#1c1b19;--muted:#6b6862;--line:#d9d6ce;--edge:#bdb9ae;
@@ -143,6 +144,35 @@ h1 span{color:var(--muted);font-weight:500}
 .ev .m{color:var(--muted);font-size:11px}
 .ev .x2{overflow-wrap:anywhere}
 
+/* ---------- View toggle and 3D mode ---------- */
+.viewtoggle{display:inline-flex;border:1px solid var(--edge);border-radius:8px;overflow:hidden}
+.viewtoggle button{border:0;background:none;padding:4px 11px;cursor:pointer;font-size:13px;color:var(--muted)}
+.viewtoggle button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+#stage3d,.hint3d{display:none}
+.note3d{display:none;font-size:13px;color:var(--muted);margin:0 0 10px}
+body.v3d main{max-width:none;padding:8px 12px 0}
+body.v3d header{padding:4px 4px 8px}
+body.v3d #view{position:relative;height:calc(100vh - 56px);min-height:540px;border-radius:14px;overflow:hidden;border:1px solid var(--line)}
+body.v3d #stage3d{display:block;position:absolute;inset:0}
+body.v3d .hint3d{display:block;position:absolute;left:14px;top:10px;font-size:12px;color:var(--muted);pointer-events:none}
+body.v3d .board{display:none}
+body.v3d .table{display:block;position:absolute;top:12px;right:12px;width:292px;max-height:calc(100% - 184px);overflow:auto;pointer-events:none}
+body.v3d .mats{flex-direction:column;gap:8px;pointer-events:auto}
+body.v3d .mats .mat{flex:none;padding:10px 12px;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+body.v3d .mat .hd svg{width:36px;height:36px;padding:4px}
+body.v3d .mat .ttl{font-size:14px}
+body.v3d .mat .big{font-size:30px;margin-top:8px}
+body.v3d .mat .rows{margin-top:6px;font-size:12px}
+body.v3d .mat .upd{margin-top:5px}
+body.v3d .hand-wrap{position:absolute;left:12px;right:12px;bottom:10px;margin:0;pointer-events:none}
+body.v3d .hand-hd{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:1px 12px;margin-bottom:6px}
+body.v3d .hand-hd .ct{font-size:18px}
+body.v3d .hand{display:flex;gap:8px;overflow-x:auto;pointer-events:auto;padding-bottom:2px}
+body.v3d .mcard{flex:0 0 188px;min-height:0;height:116px;padding:13px 10px 8px;gap:3px;box-shadow:0 2px 8px rgba(0,0,0,.14)}
+body.v3d .mcard .tx{font-size:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+body.v3d .mcard .ft{display:none}
+[data-pick]{cursor:pointer}
+
 @media (max-width:1040px){.table{grid-template-columns:1fr}.mats{flex-direction:row;flex-wrap:wrap}.mats .mat{flex:1 1 280px}}
 @media (max-width:680px){main{padding:10px 12px 32px}.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.mid{grid-template-columns:64px minmax(0,1fr) 64px}.space{padding:5px}.space .nm{font-size:10px}.pawn svg{width:28px;height:28px}}
 </style>
@@ -152,12 +182,17 @@ h1 span{color:var(--muted);font-weight:500}
   <header>
     <h1>Paragon World <span>· Board</span></h1>
     <div class="top-right">
+      <div class="viewtoggle" role="group" aria-label="Board view"><button id="v-3d" aria-pressed="false">3D</button><button id="v-flat" aria-pressed="true">Flat</button></div>
       <a id="plainlink" href="index.html">Plain page</a>
       <div class="live"><span class="dot" id="dot"></span><span id="livetxt">connecting</span></div>
     </div>
   </header>
   <div class="err" id="err"></div>
 
+  <div class="note3d" id="note3d"></div>
+  <div id="view">
+  <div id="stage3d"></div>
+  <div class="hint3d">Drag to rotate · scroll to zoom · click a piece or tile</div>
   <div class="table">
     <div class="board" id="board" aria-label="Board">
       <div class="track-row" id="track-top"></div>
@@ -175,6 +210,7 @@ h1 span{color:var(--muted);font-weight:500}
     <div class="hand-hd"><span class="label">Your move</span><span class="ct" id="hand-n">–</span></div>
     <div class="hand" id="hand"></div>
   </section>
+  </div>
 </main>
 
 <div class="scrim" id="scrim"></div>
@@ -206,7 +242,7 @@ function spaceHtml(slug, s, dir){
   const here = s.titles.filter(t => t.stageSlug === slug);
   return `<div class="space ${here.length ? "has" : ""} ${dir === "↓" || dir === "↑" ? "side" : ""}" data-stage="${slug}" style="flex:1">
     <span class="n">${i + 1}</span><span class="dir">${dir}</span><span class="nm">${esc(STAGES[slug])}</span>
-    <div class="pawns">${here.map(t => `<div class="pawn" data-title="${t.slug}" title="${esc(t.name)}: ${esc(t.stage)}">${PAWN[t.slug] || ""}<span>${esc(SHORT[t.slug] || t.name)}</span></div>`).join("")}</div></div>`;
+    <div class="pawns">${here.map(t => `<div class="pawn" data-title="${t.slug}" data-pick="title:${t.slug}" title="${esc(t.name)}: ${esc(t.stage)}">${PAWN[t.slug] || ""}<span>${esc(SHORT[t.slug] || t.name)}</span></div>`).join("")}</div></div>`;
 }
 function renderTrack(s){
   $("track-top").innerHTML = STAGE_ORDER.slice(0, 4).map(g => spaceHtml(g, s, "→")).join("");
@@ -264,10 +300,10 @@ function renderMats(s){
   }
   const ca = by["catacombes-de-paris"], tt = by["trade-and-triumph"];
   $("mats").innerHTML = `
-    <div class="mat status" data-mat="status"><div class="hd">${PAWN["status"]}<div><div class="ttl">Status: A Victorian Affair</div><div class="stg">${esc(st.stage)}</div></div></div>${statusBody}<div class="upd">${upd(st)}</div></div>
-    <div class="mat cata" data-mat="catacombes-de-paris"><div class="hd">${PAWN["catacombes-de-paris"]}<div><div class="ttl">Catacombes de Paris</div><div class="stg">Bone cart on the track</div></div></div>
+    <div class="mat status" data-mat="status" data-pick="title:status"><div class="hd">${PAWN["status"]}<div><div class="ttl">Status: A Victorian Affair</div><div class="stg">${esc(st.stage)}</div></div></div>${statusBody}<div class="upd">${upd(st)}</div></div>
+    <div class="mat cata" data-mat="catacombes-de-paris" data-pick="title:catacombes-de-paris"><div class="hd">${PAWN["catacombes-de-paris"]}<div><div class="ttl">Catacombes de Paris</div><div class="stg">Bone cart on the track</div></div></div>
       <div class="rows"><div class="r"><span>Stage</span><b>${esc(ca.stage)}</b></div><div class="r"><span>Last update</span><b>${ca.age === null ? "none yet" : ago(ca.age)}</b></div></div><div class="upd">${upd(ca)}</div></div>
-    <div class="mat tnt" data-mat="trade-and-triumph"><div class="hd">${PAWN["trade-and-triumph"]}<div><div class="ttl">Trade and Triumph</div><div class="stg">${esc(tt.stage)} · ${tt.age === null ? "no update yet" : "updated " + ago(tt.age)}</div></div></div></div>`;
+    <div class="mat tnt" data-mat="trade-and-triumph" data-pick="title:trade-and-triumph"><div class="hd">${PAWN["trade-and-triumph"]}<div><div class="ttl">Trade and Triumph</div><div class="stg">${esc(tt.stage)} · ${tt.age === null ? "no update yet" : "updated " + ago(tt.age)}</div></div></div></div>`;
 }
 
 // ---------- Your move ----------
@@ -283,7 +319,7 @@ function renderHand(s){
 }
 
 // ---------- Detail panel ----------
-let openPlace = null, last = null;
+let open = null, last = null;
 function evRow(e, now){
   return `<div class="ev"><span class="sw ${e.level}"></span><div><div class="x2">${e.demo ? '<span class="tag">demo</span> ' : ""}${esc(e.summary)}</div><div class="m">${ago(now - e.t)} · ${esc(e.source)} · ${esc(e.type)}</div></div></div>`;
 }
@@ -316,29 +352,111 @@ function panelHtml(d, s){
   body += `<h3>Recent events</h3>${evs.map(x => evRow(x, s.now)).join("") || `<div class="empty">No events for this district yet.</div>`}`;
   return body;
 }
-function openPanel(place){
+const kvRows = (rows) => `<div class="kv">${rows.filter(([, v]) => v !== null && v !== undefined && v !== "").map(([k, v]) => `<div><span>${k}</span><span>${v}</span></div>`).join("")}</div>`;
+const recent = (evs, now, empty) => `<h3>Recent events</h3>${evs.map(x => evRow(x, now)).join("") || `<div class="empty">${empty}</div>`}`;
+function runRows(r){
+  return [["Run 1 size", n0(r.run)], ["Kickstarter copies", n0(r.kickstarter)], ["Shopify preorders (games)", n0(r.preorders)], ["Games to ship", n0(r.preorders + r.kickstarter)], [r.left >= 0 ? "Copies left in run 1" : "Copies over run 1", n0(Math.abs(r.left))]];
+}
+function titleHtml(t, s){
+  const i = STAGE_ORDER.indexOf(t.stageSlug);
+  let body = `<h2>${esc(t.name)}</h2><div><span class="tag info">${esc(t.stage)}</span></div>
+    <div class="sub" style="margin-top:8px">${t.age === null ? "No stage event yet." : "Space " + (i + 1) + " of 10 · set " + ago(t.age) + " by " + esc(t.event.source)}</div>`;
+  if (t.slug === "status" && s.statusRun) body += kvRows(runRows(s.statusRun));
+  const mine = s.events.filter(x => x.entity === "title:" + t.slug);
+  const orders = mine.filter(x => x.type === "order.created" && !x.demo).length;
+  body += recent(mine.filter(x => x.type !== "order.created").slice(0, 12), s.now, "No events for this title yet.");
+  if (orders) body += `<div class="sub" style="margin-top:8px">Plus ${n0(orders)} orders in the last 9 days (see Sales).</div>`;
+  return body;
+}
+function agentHtml(a, s){
+  const state = a.silent ? (a.age === null ? "no status yet" : "silent") : a.state;
+  const at = a.workingAt && s.districts.find(d => d.slug === a.workingAt);
+  return `<h2>${esc(a.name)}</h2><div><span class="tag ${a.level === "gray" ? "" : a.level}">${esc(state)}</span></div><div class="ln">${esc(a.text)}</div>
+    ${kvRows([["Task", a.task && esc(a.task)], ["Needs", !a.silent && a.needs ? esc(a.needs) : ""], ["Working in", at ? esc(at.name) : ""], ["Last status", a.age === null ? "" : ago(a.age) + (a.silent ? " · silent after 24 hours" : "")]])}
+    ${recent(s.events.filter(x => x.entity === "agent:" + a.slug).slice(0, 12), s.now, "This agent has never sent a status.")}`;
+}
+function runHtml(s){
+  const r = s.statusRun;
+  return `<h2>Status run 1</h2><div class="sub">Printing at Sky Game. Each box on the table is 100 copies still unspoken for.</div>${r ? kvRows(runRows(r)) : `<div class="empty">No base-game total from the world function yet.</div>`}`;
+}
+function stageHtml(slug, s){
+  const i = STAGE_ORDER.indexOf(slug), here = s.titles.filter(t => t.stageSlug === slug);
+  return `<h2>${i + 1}. ${esc(STAGES[slug])}</h2><div class="sub">Space ${i + 1} of 10 on the title track.</div>
+    ${here.length ? kvRows(here.map(t => [esc(t.name), "here since " + ago(t.age)])) : `<div class="empty" style="margin-top:10px">No title on this space.</div>`}`;
+}
+function detailHtml(kind, id, s){
+  if (kind === "district"){ const d = s.districts.find(x => x.slug === id); return d ? panelHtml(d, s) : null; }
+  if (kind === "title"){ const t = s.titles.find(x => x.slug === id); return t ? titleHtml(t, s) : null; }
+  if (kind === "agent"){ const a = s.agents.find(x => x.slug === id); return a ? agentHtml(a, s) : null; }
+  if (kind === "run") return runHtml(s);
+  if (kind === "stage") return STAGE_ORDER.includes(id) ? stageHtml(id, s) : null;
+  return null;
+}
+function openPanel(kind, id){
   if (!last) return;
-  const d = last.districts.find(x => x.slug === place); if (!d) return;
-  openPlace = place;
-  $("panel-body").innerHTML = panelHtml(d, last);
+  const html = detailHtml(kind, id, last); if (!html) return;
+  open = {kind, id};
+  $("panel-body").innerHTML = html;
   $("panel").classList.add("open"); $("scrim").classList.add("open");
 }
-function closePanel(){ openPlace = null; $("panel").classList.remove("open"); $("scrim").classList.remove("open"); }
+function closePanel(){ open = null; $("panel").classList.remove("open"); $("scrim").classList.remove("open"); }
 document.addEventListener("click", (ev) => {
+  const p = ev.target.closest("[data-pick]");
+  if (p) { const [kind, id] = p.dataset.pick.split(":"); openPanel(kind, id); return; }
   const t = ev.target.closest("[data-place]");
-  if (t) { openPanel(t.dataset.place); return; }
+  if (t) { openPanel("district", t.dataset.place); return; }
   if (ev.target.id === "scrim" || ev.target.id === "panel-x") closePanel();
 });
 document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") closePanel(); });
+
+// ---------- View mode: 3D (three.js, loaded only when used) or flat ----------
+const pref = { get(){ try { return localStorage.getItem("pw-view"); } catch (_) { return null; } }, set(v){ try { localStorage.setItem("pw-view", v); } catch (_) {} } };
+let mode = "flat", scene3d = null, loading3d = false;
+function fitInset(){
+  if (!scene3d) return;
+  const st = $("stage3d").getBoundingClientRect(), mats = $("mats").getBoundingClientRect(), hand = document.querySelector(".hand-wrap").getBoundingClientRect();
+  scene3d.setInset(Math.max(0, st.right - mats.left), Math.max(0, st.bottom - hand.top));
+}
+function showMode(){
+  document.body.classList.toggle("v3d", mode === "3d");
+  $("v-3d").setAttribute("aria-pressed", String(mode === "3d")); $("v-flat").setAttribute("aria-pressed", String(mode === "flat"));
+}
+async function setMode(m, save){
+  if (save) pref.set(m);
+  if (m === "flat"){
+    mode = "flat"; showMode();
+    if (scene3d) { scene3d.dispose(); scene3d = null; }
+    return;
+  }
+  if (scene3d || loading3d) return;
+  mode = "3d"; showMode(); loading3d = true; $("note3d").style.display = "none";
+  try {
+    const { createBoard3D } = await import("./board3d.js");
+    if (mode !== "3d") return; // switched back while loading
+    scene3d = createBoard3D($("stage3d"), World, openPanel);
+    if (last) { scene3d.update(last); fitInset(); }
+  } catch (e) {
+    // No WebGL, or the 3D code failed to load: the flat board is the same data.
+    if (scene3d) { try { scene3d.dispose(); } catch (_) {} scene3d = null; }
+    mode = "flat"; showMode();
+    $("note3d").textContent = "The 3D board could not start in this browser, so this is the flat board."; $("note3d").style.display = "block";
+  } finally { loading3d = false; }
+}
+$("v-3d").addEventListener("click", () => setMode("3d", true));
+$("v-flat").addEventListener("click", () => setMode("flat", true));
+window.addEventListener("resize", fitInset);
+window.__board = { scene: () => scene3d, mode: () => mode };
 
 // ---------- Render ----------
 function render(s){
   last = s;
   renderTrack(s); renderTiles(s); renderMats(s); renderHand(s);
-  if (openPlace) { const sc = $("panel").scrollTop; openPanel(openPlace); $("panel").scrollTop = sc; }
+  if (open) { const sc = $("panel").scrollTop; openPanel(open.kind, open.id); $("panel").scrollTop = sc; }
+  if (scene3d) { scene3d.update(s); fitInset(); }
   firstRender = false;
   $("plainlink").href = "index.html#k=" + encodeURIComponent(World.key());
 }
+setMode(pref.get() || (window.innerWidth >= 900 ? "3d" : "flat"), false);
 World.start(render);
 })();
 </script>

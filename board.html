@@ -112,17 +112,9 @@ h1 span{color:var(--muted);font-weight:500}
 .mat.tnt .ttl{font-size:14px}
 
 /* ---------- Your move ---------- */
-.hand-wrap{margin-top:20px}
+.hand-wrap{margin-top:20px;overflow-x:clip}
 .hand-hd{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
 .hand-hd .ct{font-size:22px;font-weight:700}
-.hand{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
-.mcard{position:relative;text-align:left;border:1.5px solid var(--line);border-radius:12px;background:var(--card);padding:14px 12px 10px;min-height:128px;display:flex;flex-direction:column;gap:5px;cursor:pointer;overflow:hidden}
-.mcard::before{content:"";position:absolute;left:0;top:0;right:0;height:8px;background:var(--gray)}
-.mcard.warn::before{background:var(--warn)}.mcard.bad::before{background:var(--bad)}
-.mcard:hover,.mcard:focus-visible{border-color:var(--ink);outline:none}
-.mcard .nm{font-weight:650}
-.mcard .tx{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
-.mcard .ft{margin-top:auto;font-size:11px;color:var(--muted)}
 .empty{color:var(--muted);font-size:14px;padding:6px 0}
 
 /* ---------- Detail panel ---------- */
@@ -152,7 +144,7 @@ h1 span{color:var(--muted);font-weight:500}
 .note3d{display:none;font-size:13px;color:var(--muted);margin:0 0 10px}
 body.v3d main{max-width:none;padding:8px 12px 0}
 body.v3d header{padding:4px 4px 8px}
-body.v3d #view{position:relative;height:calc(100vh - 56px);min-height:540px;border-radius:14px;overflow:hidden;border:1px solid var(--line)}
+body.v3d #view{position:relative;height:calc(100vh - 56px);min-height:540px;border-radius:14px;overflow:hidden;overflow:clip;border:1px solid var(--line)}
 body.v3d #stage3d{display:block;position:absolute;inset:0}
 body.v3d .hint3d{display:block;position:absolute;left:14px;top:10px;font-size:12px;color:var(--muted);pointer-events:none}
 body.v3d .board{display:none}
@@ -164,14 +156,48 @@ body.v3d .mat .ttl{font-size:14px}
 body.v3d .mat .big{font-size:30px;margin-top:8px}
 body.v3d .mat .rows{margin-top:6px;font-size:12px}
 body.v3d .mat .upd{margin-top:5px}
-body.v3d .hand-wrap{position:absolute;left:12px;right:12px;bottom:10px;margin:0;pointer-events:none}
 body.v3d .hand-hd{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:1px 12px;margin-bottom:6px}
 body.v3d .hand-hd .ct{font-size:18px}
-body.v3d .hand{display:flex;gap:8px;overflow-x:auto;pointer-events:auto;padding-bottom:2px}
-body.v3d .mcard{flex:0 0 188px;min-height:0;height:116px;padding:13px 10px 8px;gap:3px;box-shadow:0 2px 8px rgba(0,0,0,.14)}
-body.v3d .mcard .tx{font-size:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-body.v3d .mcard .ft{display:none}
 [data-pick]{cursor:pointer}
+body.v3d #view{background:#221a14;border-color:#3a2a1e}
+body.v3d .hint3d{color:#cdbfae}
+body.v3d .hand{height:176px}
+body.v3d .pcard{bottom:-62px}
+body.v3d .pcard:hover,body.v3d .pcard:focus-visible,body.v3d .pcard.flipped{transform:translateX(var(--x,0px)) translateY(-78px) rotate(0deg) scale(1.06)}
+body.v3d .discard{bottom:8px;height:120px;width:86px}
+body.v3d .hand-wrap{position:absolute;left:12px;right:316px;bottom:0;margin:0;pointer-events:none}
+
+/* ---------- Your move: a fanned hand of cards ---------- */
+.hand{position:relative;height:232px;perspective:1300px}
+.pcard{position:absolute;left:calc(50% - 60px);bottom:8px;width:150px;height:208px;margin-left:-75px;transform-origin:50% 130%;transform:translateX(var(--x,0px)) translateY(var(--y,0px)) rotate(var(--r,0deg));transition:transform .18s ease;cursor:pointer;pointer-events:auto;outline:none;--pc:#8f8a80}
+.pcard:hover,.pcard:focus-visible,.pcard.flipped{transform:translateX(var(--x,0px)) translateY(-18px) rotate(0deg) scale(1.06);z-index:60 !important}
+.pcard.warn{--pc:#c97a06}.pcard.bad{--pc:#cf3329}
+.pc-in{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .45s ease}
+.pcard.flipped .pc-in{transform:rotateY(180deg)}
+.pc-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:12px;background:#fbf5e6;color:#231a12;border:1px solid #cbb994;box-shadow:0 3px 10px rgba(0,0,0,.3);padding:11px 11px 10px;display:flex;flex-direction:column;overflow:hidden}
+.pc-face::after{content:"";position:absolute;inset:5px;border:1.5px solid var(--pc);border-radius:8px;pointer-events:none}
+.pc-back{transform:rotateY(180deg);background:#f5edd9}
+.pcard.pile .pc-front{box-shadow:3px -3px 0 -1px #f1e8d2,3px -3px 0 0 #cbb994,6px -6px 0 -1px #eadfc6,6px -6px 0 0 #cbb994,0 3px 10px rgba(0,0,0,.3)}
+.pc-corner{display:flex;align-items:center;gap:5px;font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--pc)}
+.pc-corner svg{width:15px;height:15px;flex:0 0 auto}
+.pc-sym{display:flex;justify-content:center;margin:9px 0 7px;color:var(--pc)}
+.pc-sym svg{width:56px;height:56px}
+.pc-title{font-weight:750;font-size:15px;line-height:1.15;text-align:center}
+.pc-text{font-size:11.5px;line-height:1.3;color:#5d5144;text-align:center;margin-top:5px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.pc-count{position:absolute;right:12px;top:11px;background:var(--pc);color:#fff;border-radius:999px;font-weight:800;font-size:13px;min-width:24px;height:24px;display:grid;place-items:center;padding:0 6px}
+.pc-back .pc-title{text-align:left;font-size:14px;margin-top:6px}
+.pc-detail{font-size:11.5px;line-height:1.32;color:#4c4136;margin-top:5px;overflow:auto;overflow-wrap:anywhere;flex:1 1 auto;min-height:0}
+.pc-detail .mt{color:#85786a;margin-top:4px}
+.pc-row{display:flex;justify-content:space-between;gap:6px;width:100%;border:0;border-top:1px solid #dccfb2;background:none;padding:4px 6px 4px 3px;font-size:11.5px;color:#231a12;text-align:left;cursor:pointer;box-sizing:border-box}
+.pc-row span:last-child{color:#85786a;white-space:nowrap}
+.pc-row:hover{background:#ece2c8}
+.pc-open{margin-top:6px;border:1px solid #bda97f;background:#fffaf0;border-radius:7px;padding:4px 8px;font-size:11.5px;font-weight:650;color:#231a12;cursor:pointer;position:relative;z-index:1}
+.pc-open:hover{background:#fff}
+.discard{position:absolute;right:6px;bottom:14px;width:100px;height:139px;border:2px dashed rgba(150,135,110,.7);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:var(--muted);text-align:center;pointer-events:none}
+.discard b{font-size:24px;line-height:1}
+.discard.has{border:1px solid #1e150f;background:repeating-linear-gradient(45deg,#5a1a2e 0 8px,#6b2238 8px 16px);color:#f3e7cf;box-shadow:2px -2px 0 #3d1220,0 3px 10px rgba(0,0,0,.3)}
+body.v3d .discard{color:#cdbfae}
+@media (prefers-reduced-motion: reduce){.pcard,.pc-in{transition:none}}
 
 @media (max-width:1040px){.table{grid-template-columns:1fr}.mats{flex-direction:row;flex-wrap:wrap}.mats .mat{flex:1 1 280px}}
 @media (max-width:680px){main{padding:10px 12px 32px}.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.mid{grid-template-columns:64px minmax(0,1fr) 64px}.space{padding:5px}.space .nm{font-size:10px}.pawn svg{width:28px;height:28px}}
@@ -192,7 +218,7 @@ body.v3d .mcard .ft{display:none}
   <div class="note3d" id="note3d"></div>
   <div id="view">
   <div id="stage3d"></div>
-  <div class="hint3d">Drag to rotate · scroll to zoom · click a piece or tile</div>
+  <div class="hint3d">Drag to rotate · scroll to zoom · click a building or piece</div>
   <div class="table">
     <div class="board" id="board" aria-label="Board">
       <div class="track-row" id="track-top"></div>
@@ -208,7 +234,7 @@ body.v3d .mcard .ft{display:none}
 
   <section class="hand-wrap" aria-label="Your move">
     <div class="hand-hd"><span class="label">Your move</span><span class="ct" id="hand-n">–</span></div>
-    <div class="hand" id="hand"></div>
+    <div class="hand" id="hand"><div class="discard" id="discard">Discard</div></div>
   </section>
   </div>
 </main>
@@ -307,15 +333,78 @@ function renderMats(s){
 }
 
 // ---------- Your move ----------
+// One card per thing waiting on Kyle, with a symbol per type. All stale lines share one pile.
+const SYM = {
+  waiting: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12M6 21h12M7.500 3c0 4.500 4.500 6 4.500 9s-4.500 4.500-4.500 9M16.500 3c0 4.500-4.500 6-4.500 9s4.500 4.500 4.500 9"/><path d="M10 18.500h4" /></svg>`,
+  blocked: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.300 3h7.400L21 8.300v7.400L15.700 21H8.300L3 15.700V8.300z"/><path d="M7.500 12h9"/></svg>`,
+  hold: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.500 8v8M14.500 8v8"/></svg>`,
+  stepdown: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h5v5h5v5h5v4"/><path d="M15 16.500l3 3 3-3"/></svg>`,
+  warn: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.500L22 20H2z"/><path d="M12 10v4.500M12 17.300v.2"/></svg>`,
+  bad: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.300 3h7.400L21 8.300v7.400L15.700 21H8.300L3 15.700V8.300z"/><path d="M12 7.500v5.500M12 16.300v.2"/></svg>`,
+  stale: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 8.500V13l3 2M9 2.500h6" stroke-dasharray="0"/><path d="M19.500 4.500l1.500 1.500" /></svg>`,
+};
+const TYPE_LABEL = {waiting:"Waiting on you", blocked:"Blocked", hold:"Hold", stepdown:"Step down", warn:"Warn", bad:"Bad", stale:"Stale"};
+function handCards(s){
+  const cards = [], stale = [];
+  for (const c of s.hand){
+    if (c.kind === "stale") { stale.push(c); continue; }
+    const type = c.kind === "agent" ? (c.tag === "blocked" ? "blocked" : "waiting") : c.kind === "roas" ? (c.level === "bad" ? "stepdown" : "hold") : c.level === "bad" ? "bad" : "warn";
+    const item = c.kind === "agent" ? "agent:" + c.id : "place:" + c.id;
+    cards.push({key: item, type, level: c.level, title: c.title, text: c.text, age: c.age, pick: c.kind === "agent" ? "agent:" + c.id : "district:" + c.id, items: [item]});
+  }
+  if (stale.length) cards.push({key: "pile:stale", type: "stale", level: "gray", title: stale.length === 1 ? "1 stale line" : stale.length + " stale lines", text: "No update in 7 days: " + stale.map(c => c.title).join(", "), stale, items: stale.map(c => "place:" + c.id)});
+  return cards;
+}
+function cardHtml(c){
+  const corner = `<div class="pc-corner">${SYM[c.type]}<span>${TYPE_LABEL[c.type]}</span></div>`;
+  const back = c.type === "stale"
+    ? `<div class="pc-detail" style="margin-top:6px">${c.stale.map(x => `<button class="pc-row" data-pick="district:${x.id}"><span>${esc(x.title)}</span><span>${x.age === null ? "never" : ago(x.age).replace(" ago", "")}</span></button>`).join("")}</div>`
+    : `<div class="pc-title">${esc(c.title)}</div><div class="pc-detail">${esc(c.text)}${c.age === null ? "" : `<div class="mt">${ago(c.age)}</div>`}</div><button class="pc-open" data-pick="${c.pick}">Details</button>`;
+  return `<div class="pc-in">
+    <div class="pc-face pc-front">${corner}${c.type === "stale" ? `<span class="pc-count">${c.stale.length}</span>` : ""}<div class="pc-sym">${SYM[c.type]}</div><div class="pc-title">${esc(c.title)}</div><div class="pc-text">${esc(c.text)}</div></div>
+    <div class="pc-face pc-back">${corner}${back}</div></div>`;
+}
+const handEls = new Map(); let handItems = null, handOrder = [], flippedKey = null, discardN = 0;
+const calm = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+function layoutHand(){
+  const n = handOrder.length, room = $("hand").clientWidth - 150 - 120, gap = Math.min(132, Math.max(54, room / Math.max(1, n - 1)));
+  handOrder.forEach((key, i) => { const el = handEls.get(key), o = i - (n - 1) / 2; el.style.setProperty("--x", (o * gap).toFixed(1) + "px"); el.style.setProperty("--r", (o * 4).toFixed(1) + "deg"); el.style.setProperty("--y", (o * o * 3).toFixed(1) + "px"); el.style.zIndex = 10 + i; });
+}
+// A card whose reason is gone flies to the discard pile. The pile counts what was resolved since the page opened.
+function flyToDiscard(src){
+  const d = $("discard"); discardN++; const n = discardN;
+  const land = () => { d.classList.add("has"); d.innerHTML = `<b>${Math.max(n, +d.dataset.n || 0)}</b>resolved`; d.dataset.n = Math.max(n, +d.dataset.n || 0); };
+  if (!src || calm || !src.animate) { land(); return; }
+  const a = src.getBoundingClientRect(), b = d.getBoundingClientRect(), g = src.cloneNode(true);
+  g.classList.remove("flipped"); g.classList.add("ghost"); g.removeAttribute("data-key");
+  g.style.cssText = `position:fixed;left:${a.left + a.width / 2 - 75}px;top:${a.top + a.height / 2 - 104}px;bottom:auto;margin:0;transform:none;transition:none;z-index:200;pointer-events:none`;
+  document.body.appendChild(g);
+  const dx = b.left + b.width / 2 - (a.left + a.width / 2), dy = b.top + b.height / 2 - (a.top + a.height / 2);
+  g.animate([{transform: "none"}, {transform: `translate(${dx}px,${dy}px) rotate(180deg) scale(${(b.width / 150).toFixed(2)})`}], {duration: 750, easing: "cubic-bezier(.4,0,.2,1)"}).onfinish = () => { g.remove(); land(); };
+}
 function renderHand(s){
   $("hand-n").textContent = s.hand.length;
-  $("hand").innerHTML = s.hand.map(c => `
-    <button class="mcard ${c.level}" data-place="${c.place}" data-kind="${c.kind}">
-      <span><span class="tag ${c.level === "gray" ? "" : c.level}">${esc(c.tag)}</span></span>
-      <span class="nm">${esc(c.title)}</span>
-      <span class="tx">${esc(c.text)}</span>
-      <span class="ft">${c.age === null || c.kind === "stale" ? "" : ago(c.age)}</span>
-    </button>`).join("") || `<div class="empty">Nothing waiting on you.</div>`;
+  const cards = handCards(s), host = $("hand"), items = new Map();
+  for (const c of cards) for (const it of c.items) items.set(it, c.key);
+  if (handItems) for (const [it, key] of handItems) if (!items.has(it)) flyToDiscard(handEls.get(key));
+  for (const [key, el] of handEls) if (!cards.some(c => c.key === key)) { el.remove(); handEls.delete(key); if (flippedKey === key) flippedKey = null; }
+  handOrder = cards.map(c => c.key);
+  const dealt = [];
+  for (const c of cards){
+    let el = handEls.get(c.key);
+    if (!el){ el = document.createElement("div"); el.tabIndex = 0; el.setAttribute("role", "button"); el.dataset.key = c.key; host.insertBefore(el, $("discard")); handEls.set(c.key, el); if (handItems) dealt.push(el); }
+    const html = cardHtml(c);
+    if (el._html !== html){ el.innerHTML = html; el._html = html; }
+    el.className = "pcard " + c.level + (c.type === "stale" ? " pile" : "") + (flippedKey === c.key ? " flipped" : "");
+    el.dataset.kind = c.type; el.setAttribute("aria-label", TYPE_LABEL[c.type] + ": " + c.title);
+  }
+  layoutHand();
+  if (!calm) for (const el of dealt) if (el.animate) el.animate([{transform: `translateX(${el.style.getPropertyValue("--x")}) translateY(260px)`}, {}], {duration: 450, easing: "cubic-bezier(.2,.8,.3,1)"}); // a new card is dealt in
+  handItems = items;
+}
+function flipCard(el){
+  const key = el.dataset.key; flippedKey = flippedKey === key ? null : key;
+  for (const [k, e] of handEls) e.classList.toggle("flipped", k === flippedKey);
 }
 
 // ---------- Detail panel ----------
@@ -403,11 +492,16 @@ function closePanel(){ open = null; $("panel").classList.remove("open"); $("scri
 document.addEventListener("click", (ev) => {
   const p = ev.target.closest("[data-pick]");
   if (p) { const [kind, id] = p.dataset.pick.split(":"); openPanel(kind, id); return; }
+  const card = ev.target.closest(".pcard[data-key]");
+  if (card) { flipCard(card); return; }
   const t = ev.target.closest("[data-place]");
   if (t) { openPanel("district", t.dataset.place); return; }
   if (ev.target.id === "scrim" || ev.target.id === "panel-x") closePanel();
 });
-document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") closePanel(); });
+document.addEventListener("keydown", (ev) => {
+  if (ev.key === "Escape") closePanel();
+  if ((ev.key === "Enter" || ev.key === " ") && ev.target.matches && ev.target.matches(".pcard[data-key]")) { ev.preventDefault(); flipCard(ev.target); }
+});
 
 // ---------- View mode: 3D (three.js, loaded only when used) or flat ----------
 const pref = { get(){ try { return localStorage.getItem("pw-view"); } catch (_) { return null; } }, set(v){ try { localStorage.setItem("pw-view", v); } catch (_) {} } };
@@ -415,11 +509,12 @@ let mode = "flat", scene3d = null, loading3d = false;
 function fitInset(){
   if (!scene3d) return;
   const st = $("stage3d").getBoundingClientRect(), mats = $("mats").getBoundingClientRect(), hand = document.querySelector(".hand-wrap").getBoundingClientRect();
-  scene3d.setInset(Math.max(0, st.right - mats.left), Math.max(0, st.bottom - hand.top));
+  scene3d.setInset(Math.max(0, st.right - mats.left), Math.max(0, st.bottom - hand.top - 50)); // the cards may overlap the table edge, not the board
 }
 function showMode(){
   document.body.classList.toggle("v3d", mode === "3d");
   $("v-3d").setAttribute("aria-pressed", String(mode === "3d")); $("v-flat").setAttribute("aria-pressed", String(mode === "flat"));
+  layoutHand();
 }
 async function setMode(m, save){
   if (save) pref.set(m);
@@ -444,8 +539,9 @@ async function setMode(m, save){
 }
 $("v-3d").addEventListener("click", () => setMode("3d", true));
 $("v-flat").addEventListener("click", () => setMode("flat", true));
-window.addEventListener("resize", fitInset);
-window.__board = { scene: () => scene3d, mode: () => mode };
+window.addEventListener("resize", () => { fitInset(); layoutHand(); });
+$("view").addEventListener("scroll", () => { $("view").scrollTop = 0; $("view").scrollLeft = 0; }); // focusing a card must never scroll the scene
+window.__board = { scene: () => scene3d, mode: () => mode, discard: () => discardN };
 
 // ---------- Render ----------
 function render(s){

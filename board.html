@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">
+<title>Paragon World · Board</title>
+<style>
+:root{
+  --bg:#ecebe6;--board:#f8f7f3;--card:#ffffff;--ink:#1c1b19;--muted:#6b6862;--line:#d9d6ce;--edge:#bdb9ae;
+  --info:#3b6fd6;--good:#1f9d55;--warn:#d98b0b;--bad:#d7342c;--gray:#a3a09a;
+  --info-bg:#e9f0fc;--good-bg:#e6f6ec;--warn-bg:#fdf1dc;--bad-bg:#fbe5e3;--gray-bg:#efeeeb;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f100e;--board:#191a17;--card:#20211d;--ink:#ecebe7;--muted:#9a978f;--line:#30312c;--edge:#45463f;
+  --info:#7aa2f7;--good:#4cc27a;--warn:#f2b544;--bad:#f06a60;--gray:#6e6c67;
+  --info-bg:#1c2538;--good-bg:#162b1f;--warn-bg:#33270f;--bad-bg:#3a1a18;--gray-bg:#24241f;
+}}
+:root[data-theme="dark"]{
+  --bg:#0f100e;--board:#191a17;--card:#20211d;--ink:#ecebe7;--muted:#9a978f;--line:#30312c;--edge:#45463f;
+  --info:#7aa2f7;--good:#4cc27a;--warn:#f2b544;--bad:#f06a60;--gray:#6e6c67;
+  --info-bg:#1c2538;--good-bg:#162b1f;--warn-bg:#33270f;--bad-bg:#3a1a18;--gray-bg:#24241f;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit}
+main{max-width:1320px;margin:0 auto;padding:12px 20px 40px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:6px 0 12px}
+h1{font-size:18px;margin:0;letter-spacing:.01em}
+h1 span{color:var(--muted);font-weight:500}
+.top-right{display:flex;align-items:center;gap:16px;font-size:13px;color:var(--muted)}
+.top-right a{color:var(--muted)}
+.live{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--gray);display:inline-block}
+.dot.on{background:var(--good)}
+.dot.err{background:var(--bad)}
+.err{background:var(--bad-bg);color:var(--bad);padding:10px 12px;border-radius:10px;font-size:14px;margin:0 0 12px;display:none}
+.label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+
+/* ---------- Layout ---------- */
+.table{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
+
+/* ---------- Board ---------- */
+.board{background:var(--board);border:2px solid var(--edge);border-radius:18px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.track-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.mid{display:grid;grid-template-columns:104px minmax(0,1fr) 104px;gap:8px}
+.space{position:relative;border:1.5px solid var(--edge);border-radius:10px;background:var(--card);min-height:86px;padding:6px 8px;display:flex;flex-direction:column;gap:4px}
+.space .n{font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+.space .nm{font-size:12px;font-weight:600;line-height:1.2}
+.space .dir{position:absolute;right:7px;top:5px;font-size:12px;color:var(--edge)}
+.space .pawns{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
+.space.has{border-color:var(--ink)}
+.space.side{min-height:0}
+.pawn{display:flex;flex-direction:column;align-items:center;gap:1px;font-size:10px;color:var(--muted);line-height:1.1;text-align:center}
+.pawn svg{width:38px;height:38px;display:block}
+
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.tile{position:relative;text-align:left;border:1.5px solid var(--line);border-radius:10px;background:var(--card);padding:10px 10px 8px;min-height:128px;display:flex;flex-direction:column;gap:4px;cursor:pointer;overflow:hidden}
+.tile::before{content:"";position:absolute;left:0;top:0;right:0;height:6px;background:var(--gray)}
+.tile.info::before{background:var(--info)}.tile.good::before{background:var(--good)}.tile.warn::before{background:var(--warn)}.tile.bad::before{background:var(--bad)}
+.tile.info{background:var(--info-bg)}.tile.good{background:var(--good-bg)}.tile.warn{background:var(--warn-bg)}.tile.bad{background:var(--bad-bg)}.tile.gray{background:var(--gray-bg)}
+.tile:hover,.tile:focus-visible{border-color:var(--ink);outline:none}
+.tile .nm{font-weight:650;font-size:13px;margin-top:4px}
+.tile .tx{font-size:12px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.tile .ft{margin-top:auto;display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.tile.gray .nm{color:var(--muted)}
+.tag{display:inline-block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;padding:1px 6px;border-radius:999px;background:var(--gray-bg);color:var(--muted);border:1px solid var(--line)}
+.tag.info{color:var(--info);border-color:var(--info)}.tag.good{color:var(--good);border-color:var(--good)}.tag.warn{color:var(--warn);border-color:var(--warn)}.tag.bad{color:var(--bad);border-color:var(--bad)}
+
+.tokens{display:flex;flex-wrap:wrap;gap:3px;align-items:center;min-height:14px}
+.tok{width:12px;height:12px;border-radius:50%;background:var(--info);border:1.5px solid var(--card)}
+.tok.amazon{background:var(--warn)}
+.tok.upgrade{background:transparent;border-color:var(--info)}
+.tok.drop{animation:drop .9s cubic-bezier(.3,1.4,.5,1)}
+@keyframes drop{0%{transform:translateY(-46px);opacity:0}60%{opacity:1}100%{transform:none}}
+.tokens .more{font-size:11px;color:var(--muted)}
+
+.meeples{display:flex;gap:6px;align-items:flex-end}
+.meeple{display:flex;flex-direction:column;align-items:center;font-size:10px;color:var(--muted);line-height:1.1}
+.meeple svg{width:30px;height:38px;display:block}
+.meeple .body{fill:var(--gray)}
+.meeple.info .body{fill:var(--info)}.meeple.good .body{fill:var(--good)}.meeple.warn .body{fill:var(--warn)}.meeple.bad .body{fill:var(--bad)}
+.meeple .flag{fill:var(--bad)}.meeple .pole{stroke:var(--ink);stroke-width:1.2}
+
+/* ---------- Mats ---------- */
+.mats{display:flex;flex-direction:column;gap:12px}
+.mat{border-radius:14px;padding:14px 16px}
+.mat .hd{display:flex;gap:12px;align-items:center}
+.mat .hd svg{width:46px;height:46px;flex:0 0 auto;background:#f3ecdc;border-radius:50%;padding:6px}
+.mat .ttl{font-size:16px;font-weight:700;line-height:1.15}
+.mat .stg{font-size:12px;opacity:.85;margin-top:2px}
+.mat .rows{margin-top:10px;font-size:13px}
+.mat .r{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid rgba(255,255,255,.16)}
+.mat .r b{font-variant-numeric:tabular-nums}
+.mat .big{font-size:40px;font-weight:700;line-height:1;margin-top:12px;font-variant-numeric:tabular-nums}
+.mat .of{font-size:13px;opacity:.85;margin-top:2px}
+.mat .upd{font-size:11px;opacity:.7;margin-top:8px}
+.mat.status{background:#4a1626;color:#f3e7cf;border:1px solid #c9a45c;box-shadow:inset 0 0 0 4px #4a1626,inset 0 0 0 5px #c9a45c;font-family:Georgia,"Times New Roman",serif}
+.mat.status .ttl{letter-spacing:.02em}
+.mat.status .big{color:#e8c77c}
+.runbar{display:flex;height:12px;border-radius:3px;overflow:hidden;margin-top:10px;border:1px solid #c9a45c;gap:2px;background:#4a1626}
+.runbar i{display:block;height:100%}
+.runbar .ks{background:#c9a45c}.runbar .pre{background:#e8d5a8}.runbar .left{background:#7b2f44}
+.key{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:baseline}
+.mat.cata{background:#2b2a27;color:#e6dcc6;border:1px solid #6f685a;font-family:Georgia,"Times New Roman",serif}
+.mat.cata .r{border-top-color:rgba(230,220,198,.18)}
+.mat.tnt{background:#1f4a3a;color:#f0e6c8;border:1px solid #c7a548;padding:10px 14px}
+.mat.tnt .hd svg{width:36px;height:36px}
+.mat.tnt .ttl{font-size:14px}
+
+/* ---------- Your move ---------- */
+.hand-wrap{margin-top:20px}
+.hand-hd{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+.hand-hd .ct{font-size:22px;font-weight:700}
+.hand{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.mcard{position:relative;text-align:left;border:1.5px solid var(--line);border-radius:12px;background:var(--card);padding:14px 12px 10px;min-height:128px;display:flex;flex-direction:column;gap:5px;cursor:pointer;overflow:hidden}
+.mcard::before{content:"";position:absolute;left:0;top:0;right:0;height:8px;background:var(--gray)}
+.mcard.warn::before{background:var(--warn)}.mcard.bad::before{background:var(--bad)}
+.mcard:hover,.mcard:focus-visible{border-color:var(--ink);outline:none}
+.mcard .nm{font-weight:650}
+.mcard .tx{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.mcard .ft{margin-top:auto;font-size:11px;color:var(--muted)}
+.empty{color:var(--muted);font-size:14px;padding:6px 0}
+
+/* ---------- Detail panel ---------- */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.28);display:none;z-index:10}
+.scrim.open{display:block}
+.panel{position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);background:var(--card);border-left:1px solid var(--edge);padding:18px 20px 28px;overflow:auto;z-index:11;display:none}
+.panel.open{display:block}
+.panel .x{position:absolute;right:12px;top:10px;border:0;background:none;font-size:22px;line-height:1;cursor:pointer;color:var(--muted);padding:6px}
+.panel h2{font-size:20px;margin:0 28px 6px 0}
+.panel .ln{font-size:15px;margin:10px 0 4px;overflow-wrap:anywhere}
+.panel .sub{color:var(--muted);font-size:13px}
+.panel .kv{margin-top:8px;font-size:13px}
+.panel .kv div{padding:4px 0;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:12px}
+.panel .kv div span:last-child{text-align:right}
+.panel h3{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:18px 0 4px}
+.ev{padding:7px 0;border-top:1px solid var(--line);font-size:13px;display:grid;grid-template-columns:10px 1fr;gap:8px}
+.ev .sw{width:10px;height:10px;border-radius:50%;margin-top:4px;background:var(--gray)}
+.ev .sw.info{background:var(--info)}.ev .sw.good{background:var(--good)}.ev .sw.warn{background:var(--warn)}.ev .sw.bad{background:var(--bad)}
+.ev .m{color:var(--muted);font-size:11px}
+.ev .x2{overflow-wrap:anywhere}
+
+@media (max-width:1040px){.table{grid-template-columns:1fr}.mats{flex-direction:row;flex-wrap:wrap}.mats .mat{flex:1 1 280px}}
+@media (max-width:680px){main{padding:10px 12px 32px}.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.mid{grid-template-columns:64px minmax(0,1fr) 64px}.space{padding:5px}.space .nm{font-size:10px}.pawn svg{width:28px;height:28px}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Paragon World <span>· Board</span></h1>
+    <div class="top-right">
+      <a id="plainlink" href="index.html">Plain page</a>
+      <div class="live"><span class="dot" id="dot"></span><span id="livetxt">connecting</span></div>
+    </div>
+  </header>
+  <div class="err" id="err"></div>
+
+  <div class="table">
+    <div class="board" id="board" aria-label="Board">
+      <div class="track-row" id="track-top"></div>
+      <div class="mid">
+        <div class="track-col" id="track-left" style="display:flex"></div>
+        <div class="tiles" id="tiles"></div>
+        <div class="track-col" id="track-right" style="display:flex"></div>
+      </div>
+      <div class="track-row" id="track-bottom"></div>
+    </div>
+    <aside class="mats" id="mats" aria-label="Title mats"></aside>
+  </div>
+
+  <section class="hand-wrap" aria-label="Your move">
+    <div class="hand-hd"><span class="label">Your move</span><span class="ct" id="hand-n">–</span></div>
+    <div class="hand" id="hand"></div>
+  </section>
+</main>
+
+<div class="scrim" id="scrim"></div>
+<aside class="panel" id="panel" aria-label="Details"><button class="x" id="panel-x" aria-label="Close">×</button><div id="panel-body"></div></aside>
+
+<script src="world.js"></script>
+<script>
+(() => {
+"use strict";
+const {LA, STAGES, STAGE_ORDER, CHANNELS, $, esc, money, ago} = World;
+const n0 = (v) => Number(v).toLocaleString("en-US");
+
+// ---------- Simple drawn pieces (session 1: placeholders, polish later) ----------
+const PAWN = {
+  // Status: a top hat.
+  "status": `<svg viewBox="0 0 40 40" aria-hidden="true"><ellipse cx="20" cy="33" rx="15" ry="4" fill="#4a1626"/><rect x="11" y="9" width="18" height="23" rx="2" fill="#4a1626"/><rect x="11" y="25" width="18" height="4" fill="#c9a45c"/><ellipse cx="20" cy="9" rx="9" ry="2.5" fill="#6b2438"/></svg>`,
+  // Catacombes de Paris: a cart carrying bones.
+  "catacombes-de-paris": `<svg viewBox="0 0 40 40" aria-hidden="true"><g stroke="#e6dcc6" stroke-width="2.4" stroke-linecap="round"><line x1="10" y1="15" x2="22" y2="9"/><line x1="14" y1="9" x2="27" y2="15"/><line x1="18" y1="16" x2="30" y2="11"/></g><g fill="#e6dcc6"><circle cx="10" cy="15" r="2.2"/><circle cx="22" cy="9" r="2.2"/><circle cx="14" cy="9" r="2.2"/><circle cx="27" cy="15" r="2.2"/><circle cx="30" cy="11" r="2.2"/></g><path d="M5 17h30l-3 11H8z" fill="#2b2a27" stroke="#6f685a" stroke-width="1.5"/><line x1="35" y1="18" x2="39" y2="13" stroke="#2b2a27" stroke-width="2.5" stroke-linecap="round"/><circle cx="14" cy="31" r="5.5" fill="#6f685a" stroke="#2b2a27" stroke-width="2"/><circle cx="14" cy="31" r="1.5" fill="#2b2a27"/><circle cx="27" cy="31" r="5.5" fill="#6f685a" stroke="#2b2a27" stroke-width="2"/><circle cx="27" cy="31" r="1.5" fill="#2b2a27"/></svg>`,
+  // Trade and Triumph: a merchant's coin token.
+  "trade-and-triumph": `<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="#c7a548" stroke="#1f4a3a" stroke-width="2.5"/><circle cx="20" cy="20" r="11.5" fill="none" stroke="#1f4a3a" stroke-width="1.2"/><g stroke="#1f4a3a" stroke-width="1.8" fill="none" stroke-linecap="round"><line x1="20" y1="12" x2="20" y2="28"/><line x1="13" y1="15" x2="27" y2="15"/><path d="M10.5 21a2.8 2.8 0 0 0 5.6 0l-2.8-6z"/><path d="M23.900 21a2.8 2.8 0 0 0 5.600 0l-2.800-6z"/><line x1="16" y1="28" x2="24" y2="28"/></g></svg>`,
+};
+const SHORT = {"status":"Status","catacombes-de-paris":"Catacombes","trade-and-triumph":"T&T"};
+const meeple = (flag) => `<svg viewBox="0 0 24 30" aria-hidden="true">${flag ? `<line class="pole" x1="19" y1="1" x2="19" y2="13"/><path class="flag" d="M19 1l-8 3 8 3z"/>` : ""}<path class="body" d="M12 8a4 4 0 0 1 4 4c0 1-.3 1.8-.9 2.5C19 15.500 22 17 22 19c0 1-1 1.500-2 1.300l-3-.8 2.500 7.500H14l-2-4-2 4H4.500L7 19.500l-3 .8c-1 .2-2-.3-2-1.300 0-2 3-3.500 6.900-4.500C8.300 13.800 8 13 8 12a4 4 0 0 1 4-4z"/></svg>`;
+
+// ---------- Track: 10 spaces clockwise, Retired next to Concept ----------
+// Top row left to right: 1-4. Right side: 5. Bottom row right to left: 6-9. Left side: 10.
+function spaceHtml(slug, s, dir){
+  const i = STAGE_ORDER.indexOf(slug);
+  const here = s.titles.filter(t => t.stageSlug === slug);
+  return `<div class="space ${here.length ? "has" : ""} ${dir === "↓" || dir === "↑" ? "side" : ""}" data-stage="${slug}" style="flex:1">
+    <span class="n">${i + 1}</span><span class="dir">${dir}</span><span class="nm">${esc(STAGES[slug])}</span>
+    <div class="pawns">${here.map(t => `<div class="pawn" data-title="${t.slug}" title="${esc(t.name)}: ${esc(t.stage)}">${PAWN[t.slug] || ""}<span>${esc(SHORT[t.slug] || t.name)}</span></div>`).join("")}</div></div>`;
+}
+function renderTrack(s){
+  $("track-top").innerHTML = STAGE_ORDER.slice(0, 4).map(g => spaceHtml(g, s, "→")).join("");
+  $("track-right").innerHTML = spaceHtml(STAGE_ORDER[4], s, "↓");
+  $("track-bottom").innerHTML = STAGE_ORDER.slice(5, 9).reverse().map(g => spaceHtml(g, s, "←")).join("");
+  $("track-left").innerHTML = spaceHtml(STAGE_ORDER[9], s, "↑");
+}
+
+// ---------- District tiles ----------
+const seenOrders = new Set(); let firstRender = true;
+function tileExtra(d, s){
+  if (d.kind === "sales"){
+    const MAX = 36;
+    const list = [...s.todayOrders].reverse(); // oldest first, newest lands last
+    const shown = list.slice(-MAX);
+    return `<div class="tokens" aria-label="${list.length} orders today">${list.length > MAX ? `<span class="more">+${list.length - MAX}</span>` : ""}${shown.map(o =>
+      `<i class="tok ${o.source === "amazon" ? "amazon" : ""} ${o.details?.upgrade_of ? "upgrade" : ""} ${!firstRender && !seenOrders.has(o.id) ? "drop" : ""}" title="${esc(o.summary)}"></i>`).join("")}</div>`;
+  }
+  if (d.kind === "agents"){
+    return `<div class="meeples">${s.agents.map(a => {
+      const flag = !a.silent && (a.state === "waiting" || a.state === "blocked");
+      return `<div class="meeple ${a.level}" data-agent="${a.slug}" data-flag="${flag ? 1 : 0}" title="${esc(a.name)}: ${esc(a.silent ? (a.age === null ? "no status yet" : "silent") : a.state)}">${meeple(flag)}<span>${esc(a.name.split(" ")[0])}</span></div>`;
+    }).join("")}</div>`;
+  }
+  return "";
+}
+function renderTiles(s){
+  $("tiles").innerHTML = s.districts.map(d => `
+    <button class="tile ${d.level}" data-place="${d.slug}">
+      <span class="nm">${esc(d.name)}</span>
+      ${d.kind === "agents" ? "" : `<span class="tx">${esc(d.text)}</span>`}
+      ${tileExtra(d, s)}
+      <span class="ft"><span>${d.kind === "manual" && d.stale ? `<span class="tag">stale</span>` : d.kind === "agents" ? esc(d.text) : ""}</span><span>${d.age === null ? "" : ago(d.age)}</span></span>
+    </button>`).join("");
+  for (const o of s.todayOrders) seenOrders.add(o.id);
+}
+
+// ---------- Title mats ----------
+function renderMats(s){
+  const by = Object.fromEntries(s.titles.map(t => [t.slug, t]));
+  const upd = (t) => t.age === null ? "No stage event yet" : "Stage set " + ago(t.age) + " · " + new Date(t.event.t).toLocaleDateString("en-US", {timeZone: LA, month: "short", day: "numeric"});
+  const st = by["status"], r = s.statusRun;
+  let statusBody = `<div class="of" style="margin-top:12px">No base-game total from the world function yet.</div>`;
+  if (r){
+    const pct = (v) => Math.max(0, v) / Math.max(r.run, r.preorders + r.kickstarter) * 100;
+    statusBody = `
+      <div class="big" id="mat-left">${n0(Math.abs(r.left))}</div>
+      <div class="of">${r.left >= 0 ? "copies left in run 1" : "copies over run 1"}, out of ${n0(r.run)}</div>
+      <div class="runbar" role="img" aria-label="Run 1 split"><i class="ks" style="width:${pct(r.kickstarter)}%"></i><i class="pre" style="width:${pct(r.preorders)}%"></i><i class="left" style="flex:1"></i></div>
+      <div class="rows">
+        <div class="r"><span><i class="key" style="background:#c9a45c"></i>Kickstarter copies</span><b id="mat-ks">${n0(r.kickstarter)}</b></div>
+        <div class="r"><span><i class="key" style="background:#e8d5a8"></i>Shopify preorders (games)</span><b id="mat-pre">${n0(r.preorders)}</b></div>
+        <div class="r"><span>Games to ship</span><b>${n0(r.preorders + r.kickstarter)}</b></div>
+      </div>`;
+  }
+  const ca = by["catacombes-de-paris"], tt = by["trade-and-triumph"];
+  $("mats").innerHTML = `
+    <div class="mat status" data-mat="status"><div class="hd">${PAWN["status"]}<div><div class="ttl">Status: A Victorian Affair</div><div class="stg">${esc(st.stage)}</div></div></div>${statusBody}<div class="upd">${upd(st)}</div></div>
+    <div class="mat cata" data-mat="catacombes-de-paris"><div class="hd">${PAWN["catacombes-de-paris"]}<div><div class="ttl">Catacombes de Paris</div><div class="stg">Bone cart on the track</div></div></div>
+      <div class="rows"><div class="r"><span>Stage</span><b>${esc(ca.stage)}</b></div><div class="r"><span>Last update</span><b>${ca.age === null ? "none yet" : ago(ca.age)}</b></div></div><div class="upd">${upd(ca)}</div></div>
+    <div class="mat tnt" data-mat="trade-and-triumph"><div class="hd">${PAWN["trade-and-triumph"]}<div><div class="ttl">Trade and Triumph</div><div class="stg">${esc(tt.stage)} · ${tt.age === null ? "no update yet" : "updated " + ago(tt.age)}</div></div></div></div>`;
+}
+
+// ---------- Your move ----------
+function renderHand(s){
+  $("hand-n").textContent = s.hand.length;
+  $("hand").innerHTML = s.hand.map(c => `
+    <button class="mcard ${c.level}" data-place="${c.place}" data-kind="${c.kind}">
+      <span><span class="tag ${c.level === "gray" ? "" : c.level}">${esc(c.tag)}</span></span>
+      <span class="nm">${esc(c.title)}</span>
+      <span class="tx">${esc(c.text)}</span>
+      <span class="ft">${c.age === null || c.kind === "stale" ? "" : ago(c.age)}</span>
+    </button>`).join("") || `<div class="empty">Nothing waiting on you.</div>`;
+}
+
+// ---------- Detail panel ----------
+let openPlace = null, last = null;
+function evRow(e, now){
+  return `<div class="ev"><span class="sw ${e.level}"></span><div><div class="x2">${e.demo ? '<span class="tag">demo</span> ' : ""}${esc(e.summary)}</div><div class="m">${ago(now - e.t)} · ${esc(e.source)} · ${esc(e.type)}</div></div></div>`;
+}
+function panelHtml(d, s){
+  const lvl = d.kind === "manual" && d.stale ? `<span class="tag">stale</span>` : `<span class="tag ${d.level === "gray" ? "" : d.level}">${esc(d.level === "gray" ? "no data" : d.level)}</span>`;
+  let body = `<h2>${esc(d.name)}</h2><div>${lvl}${d.kind === "manual" && d.stale && d.sentLevel ? ` <span class="sub">was ${esc(d.sentLevel)}</span>` : ""}</div><div class="ln">${esc(d.text)}</div>`;
+  const e = d.event;
+  if (d.kind === "manual"){
+    body += `<div class="sub">${e ? "Sent by " + esc(e.source) + " · " + ago(d.age) + (d.stale ? " · older than 7 days, so it shows gray" : "") : "Nobody has sent a line for this district."}</div>`;
+    const kv = [["Milestone", e?.details?.milestone], ["Next", e?.details?.next]].filter(([, v]) => v);
+    if (kv.length) body += `<div class="kv">${kv.map(([k, v]) => `<div><span>${k}</span><span>${esc(v)}</span></div>`).join("")}</div>`;
+  }
+  if (d.kind === "sales"){
+    body += `<div class="kv">${CHANNELS.map(([slug, name]) => { const c = s.todayByChannel[slug]; return `<div><span>${name} today</span><span>${c.orders} ${c.orders === 1 ? "order" : "orders"} · ${money(c.revenue)}</span></div>`; }).join("")}
+      ${s.toShip ? `<div><span>Games to ship (Shopify + Kickstarter)</span><span>${n0(s.toShip.total)}</span></div>` : ""}</div><div class="sub" style="margin-top:6px">Today is Los Angeles time. Hollow tokens are All-In upgrade invoices.</div>`;
+  }
+  if (d.kind === "roas" && s.meta){
+    const m = s.meta, label = {bad:"Step down", warn:"Hold", good:"Step up", gray:"No spend"}[m.gate];
+    body += `<div class="kv"><div><span>Gate</span><span>${label}</span></div><div><span>Shopify sales, 7 LA days</span><span>${money(m.sales)}</span></div><div><span>Meta spend, 7 LA days</span><span>${money(m.spend)}</span></div>
+      ${m.cpv !== null ? `<div><span>Cost per view</span><span>${money(m.cpv)}</span></div>` : ""}
+      ${m.upgrades ? `<div><span>Left out: All-In upgrade invoices</span><span>${m.upgrades} · ${money(m.upgradeSales)}</span></div>` : ""}
+      <div><span>Marginal break-even</span><span>${m.marginal.toFixed(2)}</span></div><div><span>Full-cost target</span><span>${m.full === null ? "–" : m.full.toFixed(2)}</span></div></div>
+      <div class="sub" style="margin-top:6px">Assumes a clean week. Below 1.6 step down, 1.6 to 2.2 hold, 2.2+ step up unless cost per view is $1.50 or more.</div>`;
+  }
+  if (d.kind === "agents"){
+    body += `<div class="kv">${s.agents.map(a => `<div><span>${esc(a.name)}</span><span>${esc(a.silent ? (a.age === null ? "no status yet" : "silent, last " + ago(a.age)) : a.state + " · " + ago(a.age))}${a.needs && !a.silent ? "<br>Needs: " + esc(a.needs) : ""}</span></div>`).join("")}</div>`;
+  }
+  if (d.kind === "stock" && e) body += `<div class="sub">Newest snapshot ${ago(d.age)} · ${esc(e.source)}</div>`;
+  const evs = s.events.filter(x => x.place === d.slug).slice(0, 12);
+  body += `<h3>Recent events</h3>${evs.map(x => evRow(x, s.now)).join("") || `<div class="empty">No events for this district yet.</div>`}`;
+  return body;
+}
+function openPanel(place){
+  if (!last) return;
+  const d = last.districts.find(x => x.slug === place); if (!d) return;
+  openPlace = place;
+  $("panel-body").innerHTML = panelHtml(d, last);
+  $("panel").classList.add("open"); $("scrim").classList.add("open");
+}
+function closePanel(){ openPlace = null; $("panel").classList.remove("open"); $("scrim").classList.remove("open"); }
+document.addEventListener("click", (ev) => {
+  const t = ev.target.closest("[data-place]");
+  if (t) { openPanel(t.dataset.place); return; }
+  if (ev.target.id === "scrim" || ev.target.id === "panel-x") closePanel();
+});
+document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") closePanel(); });
+
+// ---------- Render ----------
+function render(s){
+  last = s;
+  renderTrack(s); renderTiles(s); renderMats(s); renderHand(s);
+  if (openPlace) { const sc = $("panel").scrollTop; openPanel(openPlace); $("panel").scrollTop = sc; }
+  firstRender = false;
+  $("plainlink").href = "index.html#k=" + encodeURIComponent(World.key());
+}
+World.start(render);
+})();
+</script>
+</body>
+</html>

@@ -24,27 +24,10 @@ const STAGE_ORDER = ["concept","prototype","playtesting","art","rulebook","manuf
 const AGENTS = [["claude","Claude"],["chatgpt","ChatGPT / Codex"],["grokbot","Grokbot"]];
 const CHANNELS = [["shopify","Shopify"],["amazon","Amazon"]];
 const STALE_MS = 7*24*3600e3, SILENT_MS = 24*3600e3;
-// Which district an agent is working in (board view: its meeple walks there). Event format v1 has no
-// district field on agent.status, so this reads details.task for a district's name or a known short form.
-// The earliest match in the task wins; no match means the agent stays on Agent HQ.
-const TASK_DISTRICT = [
-  ["customer-service", /\b(cs|customer|support|triage|refunds?|inbox|tickets?)\b/i],
-  ["marketing", /\b(meta|ads?|marketing|roas|campaigns?|mailchimp)\b/i],
-  ["sales", /\b(shopify|amazon|orders?|sales)\b/i],
-  ["finance", /\b(finance|bookkeep\w*|cash ?flow|wayflyer|tax\w*)\b/i],
-  ["freight", /\b(freight|customs|forwarder)\b/i],
-  ["warehouse", /\b(warehouse|3pl|inventory|fulfil\w*)\b/i],
-  ["production", /\b(production|manufactur\w*|printing|sky game|factory)\b/i],
-  ["crowdfunding", /\b(kickstarter|backerkit|backers?|crowdfunding|pledges?)\b/i],
-  ["legal", /\b(legal|contracts?|agreements?|compliance)\b/i],
-  ["design-studio", /\b(design studio|playtest\w*|rulebook|designer)\b/i],
-  ["art-creative", /\b(art|illustrat\w*|photos?)\b/i],
-];
-function taskDistrict(task){
-  let best = null, at = Infinity;
-  for (const [slug, re] of TASK_DISTRICT){ const m = re.exec(String(task || "")); if (m && m.index < at){ at = m.index; best = slug; } }
-  return best;
-}
+// Which district an agent belongs to on the board: details.district when the status carries it
+// (optional key, proposed to 02), otherwise a per-agent default. No district = Agent HQ.
+const AGENT_HOME = {grokbot: "customer-service"};
+const SHIP_MILESTONES = ["booked", "departed", "on-water", "customs", "arrived"];
 const STATUS_RUN1_UNITS = 5000; // Entities v1: Status run 1 at Sky Game. settings.status_run1_units overrides it if that row exists.
 const POLL_MS = 15000;
 
@@ -145,6 +128,7 @@ function compute(data){
     meta = {roas, cpv, gate, spend, views, adDays, sales: shopifyWeekSales, upgradeSales: weekUpgradeSales, upgrades: weekUpgrades, marginal, full, metaDaily};
   }
 
+  const agentDistrict = (slug, e) => { const d = e.details?.district; return DISTRICTS.some(([x]) => x === d) && d !== "agent-hq" ? d : AGENT_HOME[slug] || null; };
   // Agents: latest agent.status per agent; silent after 24h.
   const ag = latestBy(events, "agent.status", e => e.entity);
   const agents = AGENTS.map(([slug, name]) => {
@@ -153,7 +137,8 @@ function compute(data){
     const silent = now - e.t > SILENT_MS;
     const st = e.details?.state || "";
     return {slug, name, level: silent ? "gray" : e.level, state: st, text: e.summary, needs: e.details?.needs, task: e.details?.task, age: now - e.t, silent, event: e,
-      workingAt: !silent && st === "working" ? taskDistrict(e.details?.task) : null};
+      district: agentDistrict(slug, e), workingAt: !silent && st === "working" ? agentDistrict(slug, e) : null,
+      standsAt: !silent && (st === "working" || st === "waiting" || st === "blocked") ? agentDistrict(slug, e) : null};
   });
 
   // Districts.
@@ -272,5 +257,5 @@ function start(render){
   go();
 }
 
-return {LA, DISTRICTS, TITLES, STAGES, STAGE_ORDER, AGENTS, CHANNELS, $, esc, money, ago, laDate, num, compute, start, key: () => key};
+return {LA, DISTRICTS, TITLES, STAGES, STAGE_ORDER, SHIP_MILESTONES, AGENTS, CHANNELS, $, esc, money, ago, laDate, num, compute, start, key: () => key};
 })();

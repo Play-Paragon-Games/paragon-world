@@ -140,6 +140,8 @@ h1 span{color:var(--muted);font-weight:500}
 .viewtoggle{display:inline-flex;border:1px solid var(--edge);border-radius:8px;overflow:hidden}
 .viewtoggle button{border:0;background:none;padding:4px 11px;cursor:pointer;font-size:13px;color:var(--muted)}
 .viewtoggle button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.soundbtn{border:1px solid var(--edge);border-radius:8px;background:none;padding:4px 10px;cursor:pointer;font-size:13px;color:var(--muted)}
+.soundbtn[aria-pressed="true"]{color:var(--ink);border-color:var(--ink)}
 #stage3d,.hint3d{display:none}
 .note3d{display:none;font-size:13px;color:var(--muted);margin:0 0 10px}
 body.v3d main{max-width:none;padding:8px 12px 0}
@@ -209,6 +211,7 @@ body.v3d .discard{color:#cdbfae}
     <h1>Paragon World <span>· Board</span></h1>
     <div class="top-right">
       <div class="viewtoggle" role="group" aria-label="Board view"><button id="v-3d" aria-pressed="false">3D</button><button id="v-flat" aria-pressed="true">Flat</button></div>
+      <button id="sound" class="soundbtn" aria-pressed="false" title="A soft chime when an order arrives">Sound off</button>
       <a id="plainlink" href="index.html">Plain page</a>
       <div class="live"><span class="dot" id="dot"></span><span id="livetxt">connecting</span></div>
     </div>
@@ -418,7 +421,7 @@ function panelHtml(d, s){
   const e = d.event;
   if (d.kind === "manual"){
     body += `<div class="sub">${e ? "Sent by " + esc(e.source) + " · " + ago(d.age) + (d.stale ? " · older than 7 days, so it shows gray" : "") : "Nobody has sent a line for this district."}</div>`;
-    const kv = [["Milestone", e?.details?.milestone], ["Next", e?.details?.next]].filter(([, v]) => v);
+    const kv = [["Milestone", e?.details?.milestone], ["ETA", e?.details?.eta], ["Next", e?.details?.next]].filter(([, v]) => v);
     if (kv.length) body += `<div class="kv">${kv.map(([k, v]) => `<div><span>${k}</span><span>${esc(v)}</span></div>`).join("")}</div>`;
   }
   if (d.kind === "sales"){
@@ -459,9 +462,9 @@ function titleHtml(t, s){
 }
 function agentHtml(a, s){
   const state = a.silent ? (a.age === null ? "no status yet" : "silent") : a.state;
-  const at = a.workingAt && s.districts.find(d => d.slug === a.workingAt);
+  const at = a.district && s.districts.find(d => d.slug === a.district);
   return `<h2>${esc(a.name)}</h2><div><span class="tag ${a.level === "gray" ? "" : a.level}">${esc(state)}</span></div><div class="ln">${esc(a.text)}</div>
-    ${kvRows([["Task", a.task && esc(a.task)], ["Needs", !a.silent && a.needs ? esc(a.needs) : ""], ["Working in", at ? esc(at.name) : ""], ["Last status", a.age === null ? "" : ago(a.age) + (a.silent ? " · silent after 24 hours" : "")]])}
+    ${kvRows([["Task", a.task && esc(a.task)], ["Needs", !a.silent && a.needs ? esc(a.needs) : ""], [a.state === "working" ? "Working in" : "District", at ? esc(at.name) : ""], ["Last status", a.age === null ? "" : ago(a.age) + (a.silent ? " · silent after 24 hours" : "")]])}
     ${recent(s.events.filter(x => x.entity === "agent:" + a.slug).slice(0, 12), s.now, "This agent has never sent a status.")}`;
 }
 function runHtml(s){
@@ -541,12 +544,38 @@ $("v-3d").addEventListener("click", () => setMode("3d", true));
 $("v-flat").addEventListener("click", () => setMode("flat", true));
 window.addEventListener("resize", () => { fitInset(); layoutHand(); });
 $("view").addEventListener("scroll", () => { $("view").scrollTop = 0; $("view").scrollLeft = 0; }); // focusing a card must never scroll the scene
-window.__board = { scene: () => scene3d, mode: () => mode, discard: () => discardN };
+window.__board = { scene: () => scene3d, mode: () => mode, discard: () => discardN, sound: () => ({ on: sound.on, played: sound.played, state: sound.ctx ? sound.ctx.state : null }) };
+
+// ---------- Sound: a soft chime per new order. Off unless switched on. ----------
+const sound = { on: false, ctx: null, played: 0 };
+try { sound.on = localStorage.getItem("pw-sound") === "on"; } catch (_) {}
+function showSound(){ $("sound").setAttribute("aria-pressed", String(sound.on)); $("sound").textContent = sound.on ? "Sound on" : "Sound off"; }
+function audio(){ // browsers only allow sound after a click, so the context is made (or woken) on one
+  if (!sound.ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) sound.ctx = new AC(); }
+  if (sound.ctx && sound.ctx.state === "suspended") sound.ctx.resume();
+  return sound.ctx;
+}
+function chime(delay){
+  const ctx = sound.ctx; if (!sound.on || !ctx || ctx.state !== "running") return;
+  const t = ctx.currentTime + delay, g = ctx.createGain(); g.connect(ctx.destination);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.07, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+  for (const [f, v] of [[1046.5, 1], [1568, 0.45]]) { const o = ctx.createOscillator(), og = ctx.createGain(); o.type = "sine"; o.frequency.value = f; og.gain.value = v; o.connect(og); og.connect(g); o.start(t); o.stop(t + 0.95); }
+  sound.played++;
+}
+$("sound").addEventListener("click", () => { sound.on = !sound.on; try { localStorage.setItem("pw-sound", sound.on ? "on" : "off"); } catch (_) {} showSound(); if (sound.on) { audio(); chime(0.05); } });
+document.addEventListener("pointerdown", () => { if (sound.on) audio(); }, { passive: true });
+showSound();
+const heardOrders = new Set(); let heardFirst = true;
+function chimeNewOrders(s){
+  let fresh = 0;
+  for (const o of s.todayOrders) if (!heardOrders.has(o.id)) { heardOrders.add(o.id); if (!heardFirst && fresh < 6) chime(0.18 * fresh++ + 0.45); }
+  heardFirst = false;
+}
 
 // ---------- Render ----------
 function render(s){
   last = s;
-  renderTrack(s); renderTiles(s); renderMats(s); renderHand(s);
+  renderTrack(s); renderTiles(s); renderMats(s); renderHand(s); chimeNewOrders(s);
   if (open) { const sc = $("panel").scrollTop; openPanel(open.kind, open.id); $("panel").scrollTop = sc; }
   if (scene3d) { scene3d.update(s); fitInset(); }
   firstRender = false;

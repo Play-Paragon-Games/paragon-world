@@ -53,7 +53,7 @@ function bounce(k) { // ease-out bounce for a token landing
 function rng(seed) { return () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296; }
 
 export function createBoard3D(host, World, onPick) {
-  const { STAGE_ORDER, STAGES, DISTRICTS } = World;
+  const { STAGE_ORDER, STAGES, DISTRICTS, SHIP_MILESTONES, money } = World;
   const reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   // ---------- Renderer, scene, camera ----------
@@ -245,10 +245,10 @@ export function createBoard3D(host, World, onPick) {
       box(1.6, 0.28, 0.03, K("green"), 0, 0.84, 0.3); box(1.1, 0.05, 0.036, K("white"), 0, 0.955, 0.3);
       for (const x of [-0.6, -0.2, 0.2, 0.6]) box(0.1, 0.1, 0.04, win, x, 0.7, -0.375); // stage lights
     } else if (slug === "marketing") { // billboard showing 7-day ROAS
-      box(0.08, 0.5, 0.08, K("steel"), -0.6, 0, -0.1); box(0.08, 0.5, 0.08, K("steel"), 0.6, 0, -0.1);
-      box(1.84, 0.88, 0.08, K("night"), 0, 0.44, -0.1);
-      board = makeLabel(1.7, 0.74, true); add(board.plane, 0, 0.88, -0.055);
-      box(0.12, 0.05, 0.14, win, -0.5, 0.4, 0.0); box(0.12, 0.05, 0.14, win, 0.5, 0.4, 0.0); // lamps under the board
+      box(0.08, 0.2, 0.08, K("steel"), -0.6, 0, -0.1); box(0.08, 0.2, 0.08, K("steel"), 0.6, 0, -0.1); // a low board, so the sea lane behind it stays in view
+      box(1.84, 0.88, 0.08, K("night"), 0, 0.16, -0.1);
+      board = makeLabel(1.7, 0.74, true); add(board.plane, 0, 0.6, -0.055);
+      box(0.12, 0.05, 0.14, win, -0.5, 0.1, 0.0); box(0.12, 0.05, 0.14, win, 0.5, 0.1, 0.0); // lamps under the board
     } else if (slug === "customer-service") { // post office with a bell
       box(1.3, 0.55, 0.8, K("cream"), -0.1, 0, -0.1); prism(0.92, 0.3, 1.4, K("blue"), -0.1, 0.55, -0.1, Math.PI / 2);
       box(0.24, 0.36, 0.03, K("blue"), -0.1, 0, 0.31); W(0.28, 0.2, -0.5, 0.2, 0.31); W(0.28, 0.2, 0.3, 0.2, 0.31);
@@ -273,52 +273,110 @@ export function createBoard3D(host, World, onPick) {
       for (const y of [0.14, 0.44, 0.74]) W(0.8, 0.15, -0.3, y, 0.205);
       box(0.55, 0.5, 0.6, K("steel"), 0.5, 0, -0.15); W(0.36, 0.14, 0.5, 0.22, 0.155);
     }
+    // Closed shutters, shown when the district is stale and nobody is working inside.
+    const shut = [], shutMat = mat("#8d8b86", { flatShading: true });
+    const S = (w, h, x, y, z, d = 0.035) => { const o = box(w, h, d, shutMat, x, y, z + 0.016); o.visible = false; shut.push(o); return o; };
+    ({
+      "design-studio": () => { S(0.3, 0.42, 0.25, 0, 0.36); S(0.62, 0.32, -0.45, 0.14, 0.36); },
+      "art-creative": () => S(0.8, 0.44, -0.3, 0.1, 0.36),
+      "production": () => S(1.4, 0.34, -0.15, 0.08, 0.36),
+      "freight": () => { S(1.9, 0.06, 0.1, 0.22, 0.72, 0.05); S(0.06, 0.26, -0.82, 0, 0.72, 0.06); S(0.06, 0.26, 1.02, 0, 0.72, 0.06); }, // a barrier across the yard
+      "warehouse": () => { S(0.56, 0.38, -0.5, 0, 0.385); S(0.36, 0.18, 0.15, 0.21, 0.385); },
+      "sales": () => S(1.2, 0.4, 0, 0, 0.29),
+      "crowdfunding": () => S(1.56, 0.7, 0, 0.14, 0.26, 0.04), // the curtain
+      "customer-service": () => { S(0.3, 0.4, -0.1, 0, 0.31); S(0.34, 0.26, -0.5, 0.17, 0.31); S(0.34, 0.26, 0.3, 0.17, 0.31); },
+      "finance": () => S(1.02, 0.46, 0, 0.08, 0.115),
+      "legal": () => S(1.0, 0.44, 0, 0.12, 0.115),
+      "agent-hq": () => { S(0.9, 0.86, -0.3, 0.08, 0.205); S(0.42, 0.24, 0.5, 0.17, 0.155); },
+    }[slug] || (() => {}))();
+    // Production: chimney smoke, shown only while the line says printing.
+    let smoke = null, spot = null;
+    if (slug === "production") {
+      smoke = [];
+      for (let i = 0; i < 5; i++) {
+        const o = add(mesh(new THREE.IcosahedronGeometry(0.1, 0), new THREE.MeshLambertMaterial({ color: "#e4e0d8", transparent: true, opacity: 0, depthWrite: false, flatShading: true }), { cast: false, receive: false }), 0.86, 1.2, -0.2);
+        o.visible = false; smoke.push(o);
+      }
+    }
+    // Marketing: a spotlight whose beam sweeps only at step up.
+    if (slug === "marketing") {
+      spot = new THREE.Group(); spot.visible = false; add(spot, -1.0, 0, 0.2);
+      spot.add(mesh(new THREE.BoxGeometry(0.16, 0.1, 0.16), K("steel")));
+      const beamGeo = new THREE.ConeGeometry(0.46, 2.6, 14, 1, true); beamGeo.translate(0, -1.3, 0); beamGeo.rotateX(Math.PI);
+      const beam = new THREE.Mesh(beamGeo, new THREE.MeshBasicMaterial({ color: "#fff0bf", transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+      beam.position.y = 0.06; beam.rotation.x = -0.3; spot.add(beam); spot.userData.beam = beam;
+    }
     // Lantern on a post at the front corner: amber for warn, red for bad, unlit otherwise.
     box(0.035, 0.42, 0.035, K("dark"), -1.06, 0, 0.6);
     const lamp = new THREE.MeshLambertMaterial({ color: "#3a3531" });
     box(0.13, 0.14, 0.13, lamp, -1.06, 0.42, 0.6); box(0.17, 0.03, 0.17, K("dark"), -1.06, 0.56, 0.6);
-    return { g, mats, win, lamp, board };
+    return { g, mats, win, lamp, board, shut, smoke, spot };
   }
-  function drawBoard(b, d, s) { // the Marketing billboard
+  function drawBoard(b, d, s) { // the Marketing billboard: 7-day ROAS on the gate color
     const { ctx, c } = b.board, m = s.meta, live = d.level !== "gray" && m && m.roas !== null;
-    ctx.fillStyle = live ? "#fbf3df" : "#3a3836"; ctx.fillRect(0, 0, c.width, c.height);
-    ctx.textBaseline = "top"; ctx.fillStyle = live ? "#6b5a45" : "#8b8782"; ctx.font = `700 26px ${FONT}`; ctx.fillText("7-DAY ROAS", 22, 16);
+    ctx.fillStyle = live ? ({ bad: "#c0392b", warn: "#d98b0b", good: "#1f8a4c" }[m.gate] || "#6b5a45") : "#3a3836"; ctx.fillRect(0, 0, c.width, c.height);
+    ctx.textBaseline = "top"; ctx.fillStyle = live ? "rgba(255,255,255,.88)" : "#8b8782"; ctx.font = `700 26px ${FONT}`; ctx.fillText("MARKETING · 7-DAY ROAS", 22, 16);
     if (live) {
-      ctx.fillStyle = "#231a12"; ctx.font = `800 84px ${FONT}`; ctx.fillText(m.roas.toFixed(2), 20, 46);
-      const word = { bad: "STEP DOWN", warn: "HOLD", good: "STEP UP" }[m.gate] || "", col = { bad: "#c0392b", warn: "#c97a06", good: "#1f8a4c" }[m.gate] || "#6b5a45";
-      ctx.font = `800 30px ${FONT}`; const w = ctx.measureText(word).width; ctx.fillStyle = col; ctx.fillRect(c.width - w - 46, 60, w + 28, 46);
-      ctx.fillStyle = "#fff"; ctx.fillText(word, c.width - w - 32, 68);
+      ctx.fillStyle = "#fff"; ctx.font = `800 84px ${FONT}`; ctx.fillText(m.roas.toFixed(2), 20, 46);
+      const word = { bad: "STEP DOWN", warn: "HOLD", good: "STEP UP" }[m.gate] || "";
+      ctx.font = `800 30px ${FONT}`; const w = ctx.measureText(word).width; ctx.fillStyle = "#fff"; ctx.fillRect(c.width - w - 46, 60, w + 28, 46);
+      ctx.fillStyle = "#231a12"; ctx.fillText(word, c.width - w - 32, 68);
     } else { ctx.font = `700 40px ${FONT}`; ctx.fillText("no data yet", 22, 60); }
     b.board.tex.needsUpdate = true;
   }
 
   // ---------- District plots ----------
-  const SIGN_Y = { "design-studio": 1.0, "art-creative": 0.92, "production": 1.25, "freight": 1.5, "warehouse": 0.78, "sales": 0.82, "crowdfunding": 1.22, "marketing": 1.42, "customer-service": 1.24, "finance": 1.16, "legal": 1.28, "agent-hq": 1.56 };
+  const sales = { sign: null, n: null, rev: null, text: "" };
+  // Freight: where the ship sits along its short sea lane, by milestone (0 = far end, 1 = at the dock).
+  const LANE = { "booked": 0, "departed": 0.22, "on-water": 0.5, "customs": 0.8, "arrived": 1 };
+  const LANE_X = (t) => 0.86 - t * 1.34;
+  const ship = { g: null, flag: null, fc: null, ftex: null, milestone: null, eta: null, moves: 0 };
+  let workingIn = new Set(); // districts with an agent working inside
+  const ambient = { smoke: false, spot: false };
+  const SIGN_Y = { "design-studio": 1.0, "art-creative": 0.92, "production": 1.25, "freight": 1.5, "warehouse": 0.78, "sales": 1.14, "crowdfunding": 1.22, "marketing": 1.1, "customer-service": 1.24, "finance": 1.16, "legal": 1.28, "agent-hq": 1.56 };
   const tiles = {};
   DISTRICTS.forEach(([slug, name], i) => {
     const r = tileRect(i);
     const g = new THREE.Group(); g.position.set(r.x, SLAB + PLAT_H, r.z);
     const pm = mat("#e3d2aa");
     const plot = mesh(new THREE.BoxGeometry(r.w, PLOT_H, r.d), pm); plot.position.y = PLOT_H / 2; g.add(plot);
-    const b = makeBuilding(slug); b.g.position.set(0, PLOT_H, -0.45); g.add(b.g);
+    const b = makeBuilding(slug); b.g.position.set(0, PLOT_H, slug === "marketing" ? 0.3 : -0.45); g.add(b.g);
     // Name sign above the building. A sprite, so it faces the camera from any angle.
     const sc = document.createElement("canvas"), sx = sc.getContext("2d"); sx.font = `700 44px ${FONT}`;
     sc.width = Math.ceil(sx.measureText(name).width) + 52; sc.height = 74;
     const stex = new THREE.CanvasTexture(sc); stex.colorSpace = THREE.SRGBColorSpace; stex.anisotropy = maxAniso;
     const sign = new THREE.Sprite(new THREE.SpriteMaterial({ map: stex })); sign.center.set(0.5, 0); sign.scale.set(sc.width / 250, sc.height / 250, 1);
-    sign.position.set(0, PLOT_H + SIGN_Y[slug], -0.45); g.add(sign);
+    sign.position.set(0, PLOT_H + SIGN_Y[slug], slug === "marketing" ? 0.3 : -0.45); g.add(sign);
+    if (slug === "marketing") sign.visible = false; // its name is on the billboard itself, so no sign hides the sea lane behind it
     const L = { c: sc, ctx: sx, tex: stex };
     pickable(g, "district", slug); scene.add(g);
-    tiles[slug] = { slug, name, r, g, pm, L, b, sig: null, flipKey: undefined, flips: 0, level: null, top: PLOT_TOP, lit: null, lantern: null };
+    tiles[slug] = { slug, name, r, g, pm, L, b, sig: null, flipKey: undefined, flips: 0, level: null, top: PLOT_TOP, lights: null, shut: null, lantern: null };
+    if (slug === "sales") { // a sign on the shop: today's orders and revenue
+      sales.sign = makeLabel(1.36, 0.3, true); sales.sign.plane.position.set(0, PLOT_H + 0.86, -0.165); g.add(sales.sign.plane);
+    }
+    if (slug === "freight") { // a strip of sea along the front of the yard, a dock by the crane, and the ship
+      const water = mesh(new THREE.PlaneGeometry(r.w - 0.1, 0.5), mat("#3f7fa6"), { cast: false }); water.rotation.x = -Math.PI / 2; water.position.set(0, PLOT_H + 0.004, 0.68); g.add(water);
+      const dock = mesh(new THREE.BoxGeometry(0.56, 0.06, 0.16), mat(C.wood, { flatShading: true })); dock.position.set(-0.82, PLOT_H + 0.03, 0.38); g.add(dock);
+      const sg = new THREE.Group(); sg.visible = false; sg.scale.setScalar(1.45); sg.position.set(LANE_X(0), PLOT_H + 0.004, 0.68); g.add(sg);
+      const part = (w, h, d, col, x, y, z = 0) => { const o = mesh(new THREE.BoxGeometry(w, h, d), mat(col, { flatShading: true })); o.position.set(x, y + h / 2, z); sg.add(o); return o; };
+      part(0.5, 0.1, 0.17, "#7c2f2a", 0, 0); part(0.1, 0.05, 0.13, "#7c2f2a", -0.28, 0.03); // hull and bow
+      part(0.1, 0.13, 0.13, C.white, 0.17, 0.1); part(0.12, 0.07, 0.13, C.blue, -0.14, 0.1); part(0.12, 0.07, 0.13, C.yellow, -0.01, 0.1); part(0.012, 0.34, 0.012, C.dark, 0.17, 0.23);
+      const fc = document.createElement("canvas"); fc.width = 260; fc.height = 74;
+      const ftex = new THREE.CanvasTexture(fc); ftex.colorSpace = THREE.SRGBColorSpace;
+      const flag = new THREE.Sprite(new THREE.SpriteMaterial({ map: ftex })); flag.center.set(0, 0); flag.scale.set(0.72, 0.205, 1); flag.position.set(0.17, 0.42, 0); flag.visible = false; sg.add(flag);
+      ship.g = sg; ship.flag = flag; ship.fc = fc; ship.ftex = ftex;
+    }
   });
-  // Status on the building: lit windows when current, amber or red lantern for warn or bad, dark and gray when stale.
+  // Status on the building. Lights: bright while an agent works inside, a low glow when the line is current,
+  // off when stale. Stale also closes the shutters and grays the building. Lantern: amber for warn, red for bad.
   function paintTile(t, d, s) {
-    const current = d.level !== "gray";
+    const current = d.level !== "gray", working = workingIn.has(t.slug), open = current || working;
     for (const m of t.b.mats) {
       if (current) m.color.copy(m.userData.base);
       else { const c = m.userData.base, l = (c.r * 0.3 + c.g * 0.59 + c.b * 0.11) * 0.62 + 0.035; m.color.setRGB(l, l, l * 0.98); }
     }
-    t.b.win.color.set(current ? "#ffe6a8" : "#262321"); t.b.win.emissive.set(current ? "#f5b54a" : "#000000");
+    t.b.win.color.set(working ? "#fff6d6" : current ? "#b89860" : "#262321"); t.b.win.emissive.set(working ? "#ffc44d" : current ? "#4f3a17" : "#000000");
+    for (const o of t.b.shut) o.visible = !open;
     const lantern = current && (d.level === "warn" || d.level === "bad") ? d.level : null;
     t.b.lamp.color.set(lantern === "bad" ? "#ff5a48" : lantern === "warn" ? "#ffb526" : "#3a3531");
     t.b.lamp.emissive.set(lantern === "bad" ? "#e02b1d" : lantern === "warn" ? "#e08a00" : "#000000");
@@ -329,7 +387,24 @@ export function createBoard3D(host, World, onPick) {
     ctx.textBaseline = "middle"; ctx.textAlign = "center"; ctx.fillStyle = current ? "#2a1f15" : "#55514a"; ctx.font = `700 44px ${FONT}`; ctx.fillText(t.name, c.width / 2, c.height / 2 + 3);
     t.L.tex.needsUpdate = true;
     if (t.b.board) drawBoard(t.b, d, s);
-    t.level = d.level; t.lit = current; t.lantern = lantern;
+    t.level = d.level; t.lights = working ? "on" : current ? "low" : "off"; t.shut = !open; t.lantern = lantern;
+  }
+  function drawSalesSign(n, rev) {
+    const { ctx, c } = sales.sign; sales.text = `${Math.round(n)} ${Math.round(n) === 1 ? "order" : "orders"} · ${money(rev)}`;
+    ctx.fillStyle = "#231a12"; ctx.fillRect(0, 0, c.width, c.height);
+    ctx.textBaseline = "middle"; ctx.textAlign = "center"; ctx.fillStyle = "#ffd98a";
+    let px = 34; do { ctx.font = `800 ${px}px ${FONT}`; px -= 2; } while (ctx.measureText(sales.text).width > c.width - 20 && px > 14); // always fits the sign
+    ctx.fillText(sales.text, c.width / 2, c.height / 2 + 2);
+    sales.sign.tex.needsUpdate = true;
+  }
+  function etaText(eta) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(eta));
+    return "ETA " + (m ? new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : String(eta).slice(0, 12));
+  }
+  function drawEta(text) {
+    const x = ship.fc.getContext("2d"), c = ship.fc; x.clearRect(0, 0, c.width, c.height);
+    x.fillStyle = "#fbf3df"; x.strokeStyle = "#7c2f2a"; x.lineWidth = 5; x.beginPath(); x.roundRect(3, 3, c.width - 6, c.height - 6, 10); x.fill(); x.stroke();
+    x.textBaseline = "middle"; x.textAlign = "center"; x.fillStyle = "#3a1512"; x.font = `800 36px ${FONT}`; x.fillText(text, c.width / 2, c.height / 2 + 2); ship.ftex.needsUpdate = true;
   }
 
   // ---------- Pawns (low-poly, built here) ----------
@@ -378,7 +453,7 @@ export function createBoard3D(host, World, onPick) {
   // ---------- Order tokens, stacked in front of the shop ----------
   const TOKEN_H = 0.045, PILE = 10, PILES_PER_ROW = 8;
   const tokenGeo = new THREE.CylinderGeometry(0.11, 0.11, TOKEN_H - 0.006, 12);
-  const tokenMat = { shopify: mat("#3b6fd6"), amazon: mat("#e08f10"), upgrade: mat("#c9d8f6") };
+  const tokenMat = { shopify: mat("#e3b93c"), amazon: mat("#c9783a"), upgrade: mat("#cfd3d8") }; // gold, copper (Amazon), silver (All-In upgrade invoice)
   const tokens = new Map(); // order id -> mesh
   const tokenGroup = new THREE.Group(); pickable(tokenGroup, "district", "sales"); scene.add(tokenGroup);
   function tokenPos(i) {
@@ -392,13 +467,20 @@ export function createBoard3D(host, World, onPick) {
   const meepleBody = new THREE.ExtrudeGeometry(meepleShape, { depth: 0.14, bevelEnabled: false }); meepleBody.translate(0, 0, -0.07);
   const meepleHead = new THREE.CylinderGeometry(0.115, 0.115, 0.14, 10); meepleHead.rotateX(Math.PI / 2);
   const poleGeo = new THREE.CylinderGeometry(0.012, 0.012, 0.62, 5);
-  const flagGeo = new THREE.BufferGeometry();
-  flagGeo.setAttribute("position", new THREE.Float32BufferAttribute([0, 0, 0, 0, 0.16, 0, -0.24, 0.08, 0], 3)); flagGeo.computeVertexNormals();
-  const poleMat = mat("#2a2926"), flagMat = new THREE.MeshLambertMaterial({ color: "#e23a2e", side: THREE.DoubleSide });
+  const poleMat = mat("#2a2926");
   const meeples = {};
   // Outside the building, at the front of the plot.
-  function meepleHome(place, i) { const t = tiles[place] || tiles["agent-hq"]; return new THREE.Vector3(t.r.x + 0.15 + (i - 1) * 0.5, t.top, t.r.z + 0.34); }
-  function setFlag(m, u) { m.flagU = u; m.pole.visible = m.flag.visible = u > 0.001; m.flag.position.y = 0.2 + 0.5 * u; }
+  function meepleHome(place, i) { const t = tiles[place] || tiles["agent-hq"]; return new THREE.Vector3(t.r.x + 0.15 + (i - 1) * 0.5, t.top, t.r.z + (place === "freight" ? 0.14 : place === "marketing" ? 0.78 : 0.34)); }
+  // A waiting or blocked agent holds up a sign with what it needs.
+  function setSign(m, u) { m.signU = u; m.pole.visible = m.sign.visible = u > 0.001; m.sign.scale.set(1.5 * u, 0.5 * u, 1); }
+  function drawSign(m, text) {
+    const c = m.sc, x = c.getContext("2d"); x.clearRect(0, 0, c.width, c.height);
+    x.fillStyle = "#fffaf0"; x.strokeStyle = "#cf3329"; x.lineWidth = 8; x.beginPath(); x.roundRect(5, 5, c.width - 10, c.height - 10, 14); x.fill(); x.stroke();
+    x.fillStyle = "#231a12"; x.font = `700 38px ${FONT}`; x.textAlign = "center"; x.textBaseline = "middle";
+    const lines = wrap(x, text, c.width - 40).slice(0, 2); if (lines.length === 2 && wrap(x, text, c.width - 40).length > 2) lines[1] = lines[1].replace(/.{1}$/, "…");
+    lines.forEach((ln, i) => x.fillText(ln, c.width / 2, c.height / 2 + (i - (lines.length - 1) / 2) * 44 + 2));
+    m.stex.needsUpdate = true; m.signText = text;
+  }
 
   // ---------- Run 1 box stack ----------
   const BOX_COPIES = 100, BOX_N = 50, BOX_H = 0.14;
@@ -424,6 +506,7 @@ export function createBoard3D(host, World, onPick) {
     tweens.push({ t0: performance.now() + delay * 1000, dur: dur * 1000, fn, done }); invalidate();
   }
   function invalidate() { if (!raf && !disposed) raf = requestAnimationFrame(frame); }
+  let lastDraw = 0;
   function frame(now) {
     raf = 0; if (disposed) return;
     const t0 = performance.now();
@@ -433,10 +516,18 @@ export function createBoard3D(host, World, onPick) {
       tw.fn(Math.min(k, 1));
       if (k >= 1) { tweens.splice(i, 1); tw.done && tw.done(); }
     }
-    const moved = controls.update();
+    const moved = controls.update(), looping = (ambient.smoke || ambient.spot) && !reduceMotion;
+    // Smoke and the spotlight are the only things that move on their own, and only while their state holds.
+    // Alone, they draw at about 30 frames a second to stay light.
+    if (looping && !tweens.length && !moved && now - lastDraw < 30) { invalidate(); return; }
+    if (ambient.smoke) tiles["production"].b.smoke.forEach((o, i) => {
+      const p = reduceMotion ? i / 5 : (now / 4200 + i / 5) % 1;
+      o.position.set(0.86 + p * 0.32, 1.18 + p * 1.0, -0.2); o.scale.setScalar(0.7 + p * 1.5); o.material.opacity = 0.75 * (1 - p);
+    });
+    if (ambient.spot) tiles["marketing"].b.spot.userData.beam.rotation.z = reduceMotion ? -0.5 : -0.55 + Math.sin(now / 1100) * 0.5;
     renderer.render(scene, camera);
-    frames++; lastFrameMs = performance.now() - t0;
-    if (tweens.length || moved) invalidate();
+    frames++; lastDraw = now; lastFrameMs = performance.now() - t0;
+    if (tweens.length || moved || looping) invalidate();
   }
   controls.addEventListener("change", invalidate);
   let userMoved = false; controls.addEventListener("start", () => { userMoved = true; });
@@ -480,10 +571,13 @@ export function createBoard3D(host, World, onPick) {
   let first = true;
   function pawnSpaces() { const on = new Set(); for (const p of Object.values(pawns)) if (p.g.visible && p.stage != null && !p.moving) on.add(p.stage); lightSpaces(on); }
   function update(s) {
+    workingIn = new Set(s.agents.filter((a) => a.workingAt && tiles[a.workingAt]).map((a) => a.workingAt));
+    const byPlace = Object.fromEntries(s.districts.map((d) => [d.slug, d]));
+
     // Buildings: status shows on the building; it turns once when its line changes.
     for (const d of s.districts) {
       const t = tiles[d.slug]; if (!t) continue;
-      const sig = d.level + "|" + (d.kind === "roas" && s.meta && s.meta.roas !== null ? s.meta.roas.toFixed(2) + s.meta.gate : "");
+      const sig = d.level + "|" + (workingIn.has(d.slug) ? "w" : "") + "|" + (d.kind === "roas" && s.meta && s.meta.roas !== null ? s.meta.roas.toFixed(2) + s.meta.gate : "");
       // What counts as "the line changed": a new status or stock event; for Marketing, a new gate color.
       const flipKey = d.kind === "manual" || d.kind === "stock" ? (d.event ? d.event.id : null) : d.kind === "roas" ? d.level : undefined;
       const flip = !first && flipKey !== undefined && t.flipKey !== undefined && flipKey !== t.flipKey;
@@ -498,6 +592,38 @@ export function createBoard3D(host, World, onPick) {
       t.sig = sig;
     }
 
+    // A current (not stale) manual line's milestone drives the smoke and the ship.
+    const milestone = (slug) => { const d = byPlace[slug]; return d && !d.stale && d.event && d.event.details ? String(d.event.details.milestone || "").trim().toLowerCase() : ""; };
+
+    // Production: smoke only while the line's milestone is "printing".
+    const smoke = milestone("production") === "printing";
+    if (smoke !== ambient.smoke) { ambient.smoke = smoke; for (const o of tiles["production"].b.smoke) o.visible = smoke; }
+
+    // Marketing: the spotlight sweeps only at step up.
+    const spot = !!(s.meta && s.meta.gate === "good" && byPlace["marketing"] && byPlace["marketing"].level === "good");
+    if (spot !== ambient.spot) { ambient.spot = spot; tiles["marketing"].b.spot.visible = spot; }
+
+    // Freight: a ship only while a shipment is under way; its place on the lane follows the milestone.
+    const ms = milestone("freight"), sailing = SHIP_MILESTONES.includes(ms) ? ms : null;
+    const eta = sailing && byPlace["freight"].event.details.eta ? String(byPlace["freight"].event.details.eta) : null;
+    if (sailing !== ship.milestone) {
+      const was = ship.milestone; ship.milestone = sailing; ship.g.visible = !!sailing;
+      if (sailing) {
+        const x1 = LANE_X(LANE[sailing]);
+        if (first || !was) ship.g.position.x = x1; // a shipment that is already under way starts where it is
+        else { const x0 = ship.g.position.x; ship.moves++; tween(Math.max(0.8, Math.abs(x1 - x0) * 2.2), (k) => { ship.g.position.x = x0 + (x1 - x0) * ease(k); }, 0, () => { ship.g.position.x = x1; }); }
+      }
+    }
+    if (eta !== ship.eta) { ship.eta = eta; ship.flag.visible = !!eta; if (eta) drawEta(etaText(eta)); }
+
+    // Sales sign: today's orders and revenue; it counts up when an order lands.
+    const n = s.todayOrders.length, rev = Object.values(s.todayByChannel).reduce((a, c) => a + c.revenue, 0);
+    if (n !== sales.n || rev !== sales.rev) {
+      const n0 = sales.n, r0 = sales.rev; sales.n = n; sales.rev = rev;
+      if (first || n0 === null || n < n0) drawSalesSign(n, rev);
+      else tween(0.9, (k) => drawSalesSign(n0 + (n - n0) * ease(k), r0 + (rev - r0) * ease(k)), 0.3, () => drawSalesSign(n, rev));
+    }
+
     // Pawns: stand on their stage; slide along the track when the stage changes.
     const onStage = {};
     for (const t of s.titles) { const i = STAGE_ORDER.indexOf(t.stageSlug); if (i >= 0) (onStage[i] = onStage[i] || []).push(t.slug); }
@@ -510,67 +636,74 @@ export function createBoard3D(host, World, onPick) {
       p.stage = i; p.g.visible = true;
       if (first || from == null || from === i) { if (!p.moving) p.g.position.copy(target); continue; }
       // Walk the track space by space, the short way round (Retired and Concept are neighbours).
-      const fwd = (i - from + 10) % 10, step = fwd <= 5 ? 1 : -1, n = fwd <= 5 ? fwd : 10 - fwd;
+      const fwd = (i - from + 10) % 10, step = fwd <= 5 ? 1 : -1, n2 = fwd <= 5 ? fwd : 10 - fwd;
       const pts = [p.g.position.clone()];
-      for (let k = 1; k < n; k++) pts.push(spaceCenter((from + step * k + 10) % 10));
+      for (let k = 1; k < n2; k++) pts.push(spaceCenter((from + step * k + 10) % 10));
       pts.push(target);
       p.moving = true; p.slides++;
-      tween(0.5 * n, (k) => {
-        const f = k * n, seg = Math.min(Math.floor(f), n - 1);
+      tween(0.5 * n2, (k) => {
+        const f = k * n2, seg = Math.min(Math.floor(f), n2 - 1);
         p.g.position.lerpVectors(pts[seg], pts[seg + 1], ease(f - seg));
       }, 0, () => { p.moving = false; p.g.position.copy(target); pawnSpaces(); });
     }
     pawnSpaces(); // the space under each pawn is lit (a sliding pawn lights its new space on arrival)
 
-    // Order tokens: today's orders stacked in front of the shop, oldest at the bottom; new ones drop in.
+    // Orders: today's coins stacked in front of the shop, oldest at the bottom. A new order pops out of the shop door.
     const list = [...s.todayOrders].reverse(), ids = new Set(list.map((o) => o.id));
     for (const [id, m] of tokens) if (!ids.has(id)) { tokenGroup.remove(m); tokens.delete(id); } // new LA day, or an order removed
-    let fresh = 0;
+    let fresh = 0; const shop = tiles["sales"], door = new THREE.Vector3(shop.r.x, shop.top + 0.2, shop.r.z - 0.12);
     list.forEach((o, i) => {
       const pos = tokenPos(i); let m = tokens.get(o.id);
       if (m) { if (!m.userData.falling) m.position.copy(pos); return; }
       m = mesh(tokenGeo, o.details && o.details.upgrade_of ? tokenMat.upgrade : tokenMat[o.source] || tokenMat.shopify);
       tokens.set(o.id, m); tokenGroup.add(m);
       if (first) { m.position.copy(pos); return; }
-      m.userData.falling = true; m.position.set(pos.x, pos.y + 4, pos.z); m.visible = false;
-      tween(0.7, (k) => { m.visible = true; m.position.y = pos.y + 4 * (1 - bounce(k)); }, 0.15 * fresh++, () => { m.userData.falling = false; m.position.copy(pos); });
+      m.userData.falling = true; m.visible = false; pops++;
+      tween(0.75, (k) => {
+        m.visible = true; m.position.lerpVectors(door, pos, k); m.position.y += Math.sin(Math.PI * k) * 1.1; m.rotation.x = k * Math.PI * 4;
+      }, 0.18 * fresh++, () => { m.userData.falling = false; m.rotation.x = 0; m.position.copy(pos); });
     });
 
-    // Meeples: outside Agent HQ, or outside the building they are working in; flag up when waiting or blocked.
+    // Meeples: outside Agent HQ, or outside their district's building while working or waiting there.
+    // A waiting or blocked agent holds a sign with what it needs.
     s.agents.forEach((a, i) => {
       let m = meeples[a.slug];
       if (!m) {
         const g = new THREE.Group(), bm = mat(LEVEL.gray);
         const body = mesh(meepleBody, bm), head = mesh(meepleHead, bm); head.position.y = 0.47;
         const pole = mesh(poleGeo, poleMat); pole.position.set(0.3, 0.51, 0);
-        const flag = mesh(flagGeo, flagMat, { cast: false }); flag.position.set(0.3, 0.7, 0);
-        g.add(body, head, pole, flag); pickable(g, "agent", a.slug); scene.add(g);
-        m = meeples[a.slug] = { g, bm, pole, flag, place: null, flagUp: null, flagU: 0, walking: false, walks: 0 };
+        const sc = document.createElement("canvas"); sc.width = 380; sc.height = 128;
+        const stex = new THREE.CanvasTexture(sc); stex.colorSpace = THREE.SRGBColorSpace; stex.anisotropy = maxAniso;
+        const sign = new THREE.Sprite(new THREE.SpriteMaterial({ map: stex })); sign.center.set(0.5, 0); sign.position.set(0.3, 0.8, 0);
+        g.add(body, head, pole, sign); pickable(g, "agent", a.slug); scene.add(g);
+        m = meeples[a.slug] = { g, bm, pole, sign, sc, stex, place: null, signUp: null, signU: 0, signText: "", walking: false, walks: 0 };
       }
       m.bm.color.set(LEVEL[a.level] || LEVEL.gray);
-      const place = a.workingAt && tiles[a.workingAt] ? a.workingAt : "agent-hq";
-      const flagUp = !a.silent && (a.state === "waiting" || a.state === "blocked");
+      const place = a.standsAt && tiles[a.standsAt] ? a.standsAt : "agent-hq";
+      const signUp = !a.silent && (a.state === "waiting" || a.state === "blocked");
+      if (signUp) { const text = String(a.needs || (a.state === "blocked" ? "Blocked" : "Waiting on you")).slice(0, 60); if (text !== m.signText) drawSign(m, text); }
       const target = meepleHome(place, i);
-      if (first || m.place === null) { m.g.position.copy(target); setFlag(m, flagUp ? 1 : 0); }
+      if (first || m.place === null) { m.g.position.copy(target); setSign(m, signUp ? 1 : 0); }
       else {
         if (place !== m.place) {
           const from = m.g.position.clone(); from.y = target.y; const dist = from.distanceTo(target), steps = Math.max(2, Math.round(dist / 0.45));
           m.walking = true; m.walks++;
           tween(Math.max(0.6, dist / 3), (k) => { m.g.position.lerpVectors(from, target, ease(k)); m.g.position.y = target.y + Math.abs(Math.sin(k * steps * Math.PI)) * 0.09; }, 0, () => { m.walking = false; m.g.position.copy(target); });
         } else if (!m.walking) m.g.position.copy(target);
-        if (flagUp !== m.flagUp) { const u0 = m.flagU, u1 = flagUp ? 1 : 0; tween(0.5, (k) => setFlag(m, u0 + (u1 - u0) * ease(k))); }
+        if (signUp !== m.signUp) { const u0 = m.signU, u1 = signUp ? 1 : 0; tween(0.5, (k) => setSign(m, u0 + (u1 - u0) * ease(k))); }
       }
-      m.place = place; m.flagUp = flagUp;
+      m.place = place; m.signUp = signUp;
     });
 
     // Run 1: one box per 100 copies left.
     const r = s.statusRun, left = r ? r.left : null;
-    const n = left === null ? 0 : Math.max(0, Math.min(BOX_N, Math.ceil(left / BOX_COPIES)));
-    if (n !== run.n) { run.boxes.forEach((b, k) => { b.visible = k < n; }); run.n = n; }
+    const nb = left === null ? 0 : Math.max(0, Math.min(BOX_N, Math.ceil(left / BOX_COPIES)));
+    if (nb !== run.n) { run.boxes.forEach((b, k) => { b.visible = k < nb; }); run.n = nb; }
     if (left !== run.left) { run.left = left; drawRun(left === null ? "Run 1" : left >= 0 ? `Run 1 · ${left.toLocaleString("en-US")} left` : `Run 1 · ${(-left).toLocaleString("en-US")} over`); }
 
     first = false; invalidate();
   }
+  let pops = 0;
 
   // ---------- For tests and the perf note ----------
   function screenOf(kind, id) {
@@ -583,11 +716,13 @@ export function createBoard3D(host, World, onPick) {
   }
   function debug() {
     return {
-      tiles: Object.fromEntries(Object.values(tiles).map((t) => [t.slug, { level: t.level, flips: t.flips, lit: t.lit, lantern: t.lantern, parts: t.b.g.children.length }])),
+      tiles: Object.fromEntries(Object.values(tiles).map((t) => [t.slug, { level: t.level, flips: t.flips, lights: t.lights, shut: t.shut, shutters: t.b.shut.length, lantern: t.lantern, parts: t.b.g.children.length }])),
       pawns: Object.fromEntries(Object.entries(pawns).map(([k, p]) => [k, { stage: p.stage == null ? null : STAGE_ORDER[p.stage], visible: p.g.visible, moving: p.moving, slides: p.slides, x: +p.g.position.x.toFixed(2), z: +p.g.position.z.toFixed(2) }])),
       litSpaces: spaces.filter((sp) => sp.on).map((sp) => sp.slug), arrows: arrows.length,
-      tokens: tokens.size, tokensFalling: [...tokens.values()].filter((m) => m.userData.falling).length,
-      meeples: Object.fromEntries(Object.entries(meeples).map(([k, m]) => [k, { place: m.place, flag: m.flagUp, flagU: +m.flagU.toFixed(2), walks: m.walks, color: "#" + m.bm.color.getHexString() }])),
+      tokens: tokens.size, tokensFalling: [...tokens.values()].filter((m) => m.userData.falling).length, pops,
+      salesSign: sales.text, smoke: ambient.smoke, spot: ambient.spot,
+      ship: { visible: ship.g.visible, milestone: ship.milestone, x: +ship.g.position.x.toFixed(2), eta: ship.eta, flag: ship.flag.visible, moves: ship.moves },
+      meeples: Object.fromEntries(Object.entries(meeples).map(([k, m]) => [k, { place: m.place, sign: m.signUp ? m.signText : null, signU: +m.signU.toFixed(2), walks: m.walks, color: "#" + m.bm.color.getHexString() }])),
       boxes: run.n, boxesVisible: run.boxes.filter((b) => b.visible && b.parent === runGroup).length, tweens: tweens.length, frames, lastFrameMs: +lastFrameMs.toFixed(2),
       calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, pixelRatio: renderer.getPixelRatio(),
     };

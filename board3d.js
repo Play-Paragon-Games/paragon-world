@@ -9,33 +9,25 @@ import { OrbitControls } from "./vendor/OrbitControls.js";
 const V2 = THREE.Vector2;
 
 // ---------- Board geometry (units are arbitrary; the board is 14 x 10.5) ----------
-const BW = 14, BD = 10.5, M = 0.3, G = 0.2, TR = 1.6;
+const BW = 14, BD = 9.7, M = 0.3, G = 0.2, TR = 1.2, SG = 0.1;
 const SLAB = 0.3, SPACE_H = 0.12, PLAT_H = 0.2, PLOT_H = 0.06;
-const SPACE_W = (BW - 2 * M - 3 * G) / 4;
 const MID_W = BW - 2 * M - 2 * TR - 2 * G, MID_D = BD - 2 * M - 2 * TR - 2 * G;
 const TILE_W = (MID_W - 3 * G) / 4, TILE_D = (MID_D - 2 * G) / 3;
 const PLOT_TOP = SLAB + PLAT_H + PLOT_H;
 const PX = 200; // label texture pixels per board unit
 
-// Track: 10 spaces clockwise seen from above. Top row 1-4 left to right, right side 5,
-// bottom row 6-9 right to left, left side 10 (Retired, next to Concept).
-const rowX = (c) => -BW / 2 + M + SPACE_W / 2 + c * (SPACE_W + G);
+// Kyle's track: 20 plain spaces clockwise seen from above. Top row 0-6 left to right (0 is Start),
+// right side 7-9 downward, bottom row 10-16 right to left, left side 17-19 upward.
+const RING = 20;
+const SPACE_W = (BW - 2 * M - 6 * SG) / 7, SIDE_D = (BD - 2 * M - 2 * TR - 2 * G - 2 * SG) / 3;
+const rowX = (c) => -BW / 2 + M + SPACE_W / 2 + c * (SPACE_W + SG);
+const colZ = (c) => -(BD - 2 * M - 2 * TR - 2 * G) / 2 + SIDE_D / 2 + c * (SIDE_D + SG);
 const ROW_Z = BD / 2 - M - TR / 2, COL_X = BW / 2 - M - TR / 2;
 function spaceRect(i) {
-  if (i < 4) return { x: rowX(i), z: -ROW_Z, w: SPACE_W, d: TR, side: false };
-  if (i === 4) return { x: COL_X, z: 0, w: TR, d: MID_D, side: true };
-  if (i < 9) return { x: rowX(3 - (i - 5)), z: ROW_Z, w: SPACE_W, d: TR, side: false };
-  return { x: -COL_X, z: 0, w: TR, d: MID_D, side: true };
-}
-// Inlaid arrow from space i to the next: where it sits and which way it points (angle about y; 0 = +x).
-function arrowAt(i) {
-  const gz = MID_D / 2 + G / 2;
-  if (i < 3) return { x: rowX(i) + SPACE_W / 2 + G / 2, z: -ROW_Z, a: 0 };
-  if (i === 3) return { x: COL_X, z: -gz, a: -Math.PI / 2 };
-  if (i === 4) return { x: COL_X, z: gz, a: -Math.PI / 2 };
-  if (i < 8) return { x: rowX(3 - (i - 5)) - SPACE_W / 2 - G / 2, z: ROW_Z, a: Math.PI };
-  if (i === 8) return { x: -COL_X, z: gz, a: Math.PI / 2 };
-  return { x: -COL_X, z: -gz, a: Math.PI / 2 };
+  if (i < 7) return { x: rowX(i), z: -ROW_Z, w: SPACE_W, d: TR };
+  if (i < 10) return { x: COL_X, z: colZ(i - 7), w: TR, d: SIDE_D };
+  if (i < 17) return { x: rowX(6 - (i - 10)), z: ROW_Z, w: SPACE_W, d: TR };
+  return { x: -COL_X, z: colZ(2 - (i - 17)), w: TR, d: SIDE_D };
 }
 function tileRect(i) {
   const c = i % 4, r = Math.floor(i / 4);
@@ -53,7 +45,7 @@ function bounce(k) { // ease-out bounce for a token landing
 function rng(seed) { return () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296; }
 
 export function createBoard3D(host, World, onPick) {
-  const { STAGE_ORDER, STAGES, DISTRICTS, SHIP_MILESTONES, money } = World;
+  const { DISTRICTS, SHIP_MILESTONES, money } = World;
   const reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   // ---------- Renderer, scene, camera ----------
@@ -144,50 +136,58 @@ export function createBoard3D(host, World, onPick) {
   const pickables = [];
   const pickable = (obj, kind, id) => { obj.userData.pick = { kind, id }; pickables.push(obj); return obj; };
 
-  // ---------- Track spaces: dark wood, brass lettering, lit when a pawn stands on them ----------
+  // ---------- Kyle's track: a ring of plain dark-wood spaces, a brass Start, and the founder pawn ----------
   const BRASS = "#d9b872";
-  function drawSpace(sp, on) {
-    const { ctx, c } = sp.L, i = sp.i;
-    ctx.fillStyle = on ? "#a8793c" : "#5a4029"; ctx.fillRect(0, 0, c.width, c.height);
-    if (on) { ctx.strokeStyle = "#f3d489"; ctx.lineWidth = 12; ctx.strokeRect(6, 6, c.width - 12, c.height - 12); }
-    const pad = 20; let y = pad; ctx.textBaseline = "top";
-    ctx.fillStyle = on ? "#fff1cf" : BRASS; ctx.font = `600 28px ${FONT}`; ctx.fillText(String(i + 1), pad, y);
-    if (i === 0) { // the marked start
-      ctx.fillStyle = BRASS; const w = 128; ctx.fillRect(pad + 36, y - 4, w, 38);
-      ctx.fillStyle = "#3a2a1e"; ctx.font = `800 26px ${FONT}`; ctx.fillText("START", pad + 36 + 16, y + 3);
-    }
-    y += 40;
-    ctx.fillStyle = on ? "#fffaf0" : "#f1e2c2"; const size = sp.r.side ? 34 : 40; ctx.font = `700 ${size}px ${FONT}`;
-    for (const line of wrap(ctx, STAGES[sp.slug], c.width - 2 * pad)) { ctx.fillText(line, pad, y); y += size * 1.15; }
-    sp.L.tex.needsUpdate = true;
-  }
-  const spaces = STAGE_ORDER.map((slug, i) => {
-    const r = spaceRect(i);
+  const spaceGeoRow = new THREE.BoxGeometry(SPACE_W, SPACE_H, TR), spaceGeoCol = new THREE.BoxGeometry(TR, SPACE_H, SIDE_D);
+  const inlayRow = new THREE.PlaneGeometry(SPACE_W - 0.22, TR - 0.22), inlayCol = new THREE.PlaneGeometry(TR - 0.22, SIDE_D - 0.22);
+  const spaces = Array.from({ length: RING }, (_, i) => {
+    const r = spaceRect(i), row = i < 7 || (i >= 10 && i < 17);
     const g = new THREE.Group(); g.position.set(r.x, SLAB, r.z);
-    const m = mat("#4a3423");
-    const block = mesh(new THREE.BoxGeometry(r.w, SPACE_H, r.d), m); block.position.y = SPACE_H / 2; g.add(block);
-    const L = flat(makeLabel(r.w - 0.12, r.d - 0.12)); L.plane.position.y = SPACE_H + 0.003; g.add(L.plane);
-    pickable(g, "stage", slug); scene.add(g);
-    const sp = { slug, i, r, g, m, L, on: null };
-    return sp;
+    const m = mat(i === 0 ? "#c9a45c" : "#4a3423"), im = mat(i === 0 ? "#e2c684" : i % 2 ? "#5d4530" : "#553e2a");
+    const block = mesh(row ? spaceGeoRow : spaceGeoCol, m); block.position.y = SPACE_H / 2; g.add(block);
+    const inlay = mesh(row ? inlayRow : inlayCol, im, { cast: false }); inlay.rotation.x = -Math.PI / 2; inlay.position.y = SPACE_H + 0.003; g.add(inlay);
+    if (i === 0) { // the marked Start
+      const L = flat(makeLabel(SPACE_W - 0.3, 0.42)); L.plane.position.set(0, SPACE_H + 0.006, -TR / 2 + 0.36); g.add(L.plane);
+      const { ctx, c } = L; ctx.fillStyle = "#3a2a1e"; ctx.fillRect(0, 0, c.width, c.height);
+      ctx.fillStyle = BRASS; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = `800 54px ${FONT}`; ctx.fillText("START", c.width / 2, c.height / 2 + 3); L.tex.needsUpdate = true;
+    }
+    pickable(g, "founder", "me"); scene.add(g);
+    return { i, r, g, im, base: im.color.clone(), on: false };
   });
-  function lightSpaces(onSet) {
-    for (const sp of spaces) { const on = onSet.has(sp.i); if (on !== sp.on) { sp.on = on; sp.m.color.set(on ? "#c9963f" : "#4a3423"); drawSpace(sp, on); } }
-  }
-  // Brass arrows inlaid between spaces, showing the way round.
+  function lightSpace(at) { for (const sp of spaces) { const on = sp.i === at; if (on !== sp.on) { sp.on = on; if (on) sp.im.color.set("#f0c66a"); else sp.im.color.copy(sp.base); } } }
+  // Brass arrows inlaid after Start and at the four turns, showing the way round.
   const arrowShape = new THREE.Shape([[-0.2, 0.15], [0.03, 0.15], [0.2, 0], [0.03, -0.15], [-0.2, -0.15], [-0.05, 0]].map(([x, y]) => new V2(x, y)));
   const arrowGeo = new THREE.ExtrudeGeometry(arrowShape, { depth: 0.03, bevelEnabled: false }); arrowGeo.rotateX(-Math.PI / 2);
   const arrowMat = mat("#c9a45c");
-  const arrows = STAGE_ORDER.map((_, i) => { const a = arrowAt(i), m = mesh(arrowGeo, arrowMat); m.position.set(a.x, SLAB + SPACE_H - 0.012, a.z); m.rotation.y = a.a; scene.add(m); return m; });
-
-  // Where a pawn stands on its space: k-th of n pawns sharing it.
-  function pawnSlot(i, k, n) {
-    const r = spaceRect(i), off = (k - (n - 1) / 2) * 0.95;
-    if (r.side) return new THREE.Vector3(r.x, SLAB + SPACE_H, r.z + 0.4 + off);
-    // Top row: stand on the far half, clear of the buildings in front. Bottom row: the near half.
-    return new THREE.Vector3(r.x + 0.7 + off, SLAB + SPACE_H, r.z + (r.z < 0 ? -0.28 : 0.22));
+  const arrows = [0, 6, 9, 16, 19].map((i) => {
+    const a = spaceRect(i), b = spaceRect((i + 1) % RING), m = mesh(arrowGeo, arrowMat);
+    m.position.set((a.x + b.x) / 2, SLAB + SPACE_H + 0.004, (a.z + b.z) / 2); m.rotation.y = Math.atan2(-(b.z - a.z), b.x - a.x); scene.add(m); return m;
+  });
+  const spaceCenter = (i) => { const r = spaceRect(((i % RING) + RING) % RING); // Top row: stand on the far half, clear of the buildings in front of it.
+    return new THREE.Vector3(r.x, SLAB + SPACE_H, r.z + (i % RING === 0 ? 0.22 : r.z < -ROW_Z + 0.01 ? -0.2 : 0)); };
+  // The founder pawn: a low-poly crown, Paragon ink and brass.
+  const founder = { g: new THREE.Group(), pos: 0, moving: false, walks: 0 };
+  {
+    const ink = mat("#1c1b19", { flatShading: true }), gold = mat("#d9b24a", { flatShading: true }), gem = mat("#7a1f34", { flatShading: true });
+    const base = mesh(new THREE.CylinderGeometry(0.3, 0.36, 0.1, 12), ink); base.position.y = 0.05;
+    const band = mesh(new THREE.CylinderGeometry(0.27, 0.25, 0.22, 12), gold); band.position.y = 0.21;
+    founder.g.add(base, band);
+    for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2, p = mesh(new THREE.ConeGeometry(0.075, 0.2, 4), gold); p.position.set(Math.cos(a) * 0.235, 0.42, Math.sin(a) * 0.235); founder.g.add(p); }
+    const jewel = mesh(new THREE.IcosahedronGeometry(0.06, 0), gem); jewel.position.set(0, 0.22, 0.27); founder.g.add(jewel);
+    founder.g.scale.setScalar(1.45); founder.g.position.copy(spaceCenter(0));
+    pickable(founder.g, "founder", "me"); scene.add(founder.g);
   }
-  const spaceCenter = (i) => { const r = spaceRect(i); return new THREE.Vector3(r.x, SLAB + SPACE_H, r.z + (r.side ? 0 : r.z < 0 ? -0.28 : 0.22)); };
+  function setFounder(pos) { if (founder.moving) return; founder.pos = ((pos % RING) + RING) % RING; founder.g.position.copy(spaceCenter(founder.pos)); lightSpace(founder.pos); invalidate(); }
+  // The pawn walks n spaces clockwise from where it stands, one hop per space. Only a roll calls this.
+  function walkFounder(n, done) {
+    const from = founder.pos, pts = []; for (let k = 0; k <= n; k++) pts.push(spaceCenter(from + k));
+    founder.moving = true; founder.walks++; founder.pos = (from + n) % RING;
+    tween(0.3 * n, (k) => {
+      const f = k * n, seg = Math.min(Math.floor(f), n - 1), u = f - seg;
+      founder.g.position.lerpVectors(pts[seg], pts[seg + 1], ease(u)); founder.g.position.y += Math.sin(Math.PI * u) * 0.35;
+      lightSpace((from + seg + (u > 0.5 ? 1 : 0)) % RING);
+    }, 0, () => { founder.moving = false; founder.g.position.copy(spaceCenter(founder.pos)); lightSpace(founder.pos); done && done(); });
+  }
 
   // ---------- District buildings (low-poly, built here) ----------
   // Each building sits at the back of its plot; the front is left free for its name, meeples and tokens.
@@ -340,17 +340,19 @@ export function createBoard3D(host, World, onPick) {
     const g = new THREE.Group(); g.position.set(r.x, SLAB + PLAT_H, r.z);
     const pm = mat("#e3d2aa");
     const plot = mesh(new THREE.BoxGeometry(r.w, PLOT_H, r.d), pm); plot.position.y = PLOT_H / 2; g.add(plot);
-    const b = makeBuilding(slug); b.g.position.set(0, PLOT_H, slug === "marketing" ? 0.3 : -0.45); g.add(b.g);
+    // Back-row buildings stand forward on their plots so they do not hide the far side of Kyle's track.
+    const bz = slug === "marketing" ? 0.3 : i < 4 ? -0.1 : -0.45;
+    const b = makeBuilding(slug); b.g.position.set(0, PLOT_H, bz); g.add(b.g);
     // Name sign above the building. A sprite, so it faces the camera from any angle.
     const sc = document.createElement("canvas"), sx = sc.getContext("2d"); sx.font = `700 44px ${FONT}`;
     sc.width = Math.ceil(sx.measureText(name).width) + 52; sc.height = 74;
     const stex = new THREE.CanvasTexture(sc); stex.colorSpace = THREE.SRGBColorSpace; stex.anisotropy = maxAniso;
     const sign = new THREE.Sprite(new THREE.SpriteMaterial({ map: stex })); sign.center.set(0.5, 0); sign.scale.set(sc.width / 250, sc.height / 250, 1);
-    sign.position.set(0, PLOT_H + SIGN_Y[slug], slug === "marketing" ? 0.3 : -0.45); g.add(sign);
+    sign.position.set(0, PLOT_H + SIGN_Y[slug], bz); g.add(sign);
     if (slug === "marketing") sign.visible = false; // its name is on the billboard itself, so no sign hides the sea lane behind it
     const L = { c: sc, ctx: sx, tex: stex };
     pickable(g, "district", slug); scene.add(g);
-    tiles[slug] = { slug, name, r, g, pm, L, b, sig: null, flipKey: undefined, flips: 0, level: null, top: PLOT_TOP, lights: null, shut: null, lantern: null };
+    tiles[slug] = { slug, name, r, g, pm, L, b, row0: i < 4, sig: null, flipKey: undefined, flips: 0, level: null, top: PLOT_TOP, lights: null, shut: null, lantern: null };
     if (slug === "sales") { // a sign on the shop: today's orders and revenue
       sales.sign = makeLabel(1.36, 0.3, true); sales.sign.plane.position.set(0, PLOT_H + 0.86, -0.165); g.add(sales.sign.plane);
     }
@@ -407,49 +409,6 @@ export function createBoard3D(host, World, onPick) {
     x.textBaseline = "middle"; x.textAlign = "center"; x.fillStyle = "#3a1512"; x.font = `800 36px ${FONT}`; x.fillText(text, c.width / 2, c.height / 2 + 2); ship.ftex.needsUpdate = true;
   }
 
-  // ---------- Pawns (low-poly, built here) ----------
-  function topHat() { // Status
-    const g = new THREE.Group(), body = mat("#5a1a2e", { flatShading: true }), gold = mat("#c9a45c", { flatShading: true });
-    const brim = mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.06, 14), body); brim.position.y = 0.03;
-    const crown = mesh(new THREE.CylinderGeometry(0.3, 0.27, 0.56, 14), body); crown.position.y = 0.34;
-    const band = mesh(new THREE.CylinderGeometry(0.285, 0.28, 0.1, 14), gold); band.position.y = 0.13;
-    g.add(brim, crown, band); return g;
-  }
-  function boneCart() { // Catacombes de Paris
-    const g = new THREE.Group(), wood = mat("#6b5238", { flatShading: true }), iron = mat("#8a8275", { flatShading: true }), bone = mat("#efe6d2", { flatShading: true });
-    const bed = mesh(new THREE.BoxGeometry(0.78, 0.07, 0.5), wood); bed.position.y = 0.26;
-    const wallGeoL = new THREE.BoxGeometry(0.78, 0.2, 0.05), wallGeoS = new THREE.BoxGeometry(0.05, 0.2, 0.5);
-    for (const z of [-0.225, 0.225]) { const w = mesh(wallGeoL, wood); w.position.set(0, 0.38, z); g.add(w); }
-    for (const x of [-0.365, 0.365]) { const w = mesh(wallGeoS, wood); w.position.set(x, 0.38, 0); g.add(w); }
-    const wheelGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.06, 10); wheelGeo.rotateX(Math.PI / 2);
-    for (const z of [-0.3, 0.3]) { const w = mesh(wheelGeo, iron); w.position.set(-0.08, 0.2, z); g.add(w); }
-    const shaftGeo = new THREE.BoxGeometry(0.5, 0.04, 0.04);
-    for (const z of [-0.2, 0.2]) { const sft = mesh(shaftGeo, wood); sft.position.set(0.6, 0.2, z); sft.rotation.z = -0.28; g.add(sft); }
-    const leg = mesh(new THREE.BoxGeometry(0.04, 0.24, 0.04), wood); leg.position.set(0.3, 0.12, 0); g.add(leg);
-    const shaft = new THREE.CylinderGeometry(0.028, 0.028, 0.46, 5); shaft.rotateZ(Math.PI / 2);
-    const knob = new THREE.IcosahedronGeometry(0.058, 0);
-    const pile = [[-0.05, 0.44, -0.1, 0.2, 0.1], [0.02, 0.45, 0.08, -0.5, -0.1], [-0.02, 0.5, 0, 1.2, 0.25], [0.08, 0.53, -0.04, 0.6, -0.2], [-0.1, 0.55, 0.05, -0.9, 0.15]];
-    for (const [x, y, z, ry, rz] of pile) {
-      const b = new THREE.Group(); b.add(mesh(shaft, bone));
-      for (const e of [-0.23, 0.23]) { const k = mesh(knob, bone); k.position.x = e; b.add(k); }
-      b.position.set(x, y, z); b.rotation.set(0, ry, rz); g.add(b);
-    }
-    g.add(bed); return g;
-  }
-  function coin() { // Trade and Triumph
-    const g = new THREE.Group();
-    const rim = mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.12, 16), mat("#1f5a44", { flatShading: true })); rim.position.y = 0.06;
-    const face = mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.05, 16), mat("#d4b04f", { flatShading: true })); face.position.y = 0.125;
-    const boss = mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.05, 8), mat("#1f5a44", { flatShading: true })); boss.position.y = 0.16;
-    g.add(rim, face, boss); return g;
-  }
-  const PAWN_BUILD = { "status": topHat, "catacombes-de-paris": boneCart, "trade-and-triumph": coin };
-  const pawns = {};
-  for (const [slug, build] of Object.entries(PAWN_BUILD)) {
-    const g = build(); g.visible = false; pickable(g, "title", slug); scene.add(g);
-    pawns[slug] = { g, stage: undefined, moving: false, slides: 0 };
-  }
-
   // ---------- Order tokens, stacked in front of the shop ----------
   const TOKEN_H = 0.045, PILE = 10, PILES_PER_ROW = 8;
   const tokenGeo = new THREE.CylinderGeometry(0.11, 0.11, TOKEN_H - 0.006, 12);
@@ -470,7 +429,7 @@ export function createBoard3D(host, World, onPick) {
   const poleMat = mat("#2a2926");
   const meeples = {};
   // Outside the building, at the front of the plot.
-  function meepleHome(place, i) { const t = tiles[place] || tiles["agent-hq"]; return new THREE.Vector3(t.r.x + 0.15 + (i - 1) * 0.5, t.top, t.r.z + (place === "freight" ? 0.14 : place === "marketing" ? 0.78 : 0.34)); }
+  function meepleHome(place, i) { const t = tiles[place] || tiles["agent-hq"]; return new THREE.Vector3(t.r.x + 0.15 + (i - 1) * 0.5, t.top, t.r.z + (place === "freight" ? 0.36 : place === "marketing" ? 0.78 : t.row0 ? 0.74 : 0.34)); }
   // A waiting or blocked agent holds up a sign with what it needs.
   function setSign(m, u) { m.signU = u; m.pole.visible = m.sign.visible = u > 0.001; m.sign.scale.set(1.5 * u, 0.5 * u, 1); }
   function drawSign(m, text) {
@@ -569,7 +528,6 @@ export function createBoard3D(host, World, onPick) {
 
   // ---------- Update from a new state. Motion happens only where the state changed. ----------
   let first = true;
-  function pawnSpaces() { const on = new Set(); for (const p of Object.values(pawns)) if (p.g.visible && p.stage != null && !p.moving) on.add(p.stage); lightSpaces(on); }
   function update(s) {
     workingIn = new Set(s.agents.filter((a) => a.workingAt && tiles[a.workingAt]).map((a) => a.workingAt));
     const byPlace = Object.fromEntries(s.districts.map((d) => [d.slug, d]));
@@ -623,30 +581,6 @@ export function createBoard3D(host, World, onPick) {
       if (first || n0 === null || n < n0) drawSalesSign(n, rev);
       else tween(0.9, (k) => drawSalesSign(n0 + (n - n0) * ease(k), r0 + (rev - r0) * ease(k)), 0.3, () => drawSalesSign(n, rev));
     }
-
-    // Pawns: stand on their stage; slide along the track when the stage changes.
-    const onStage = {};
-    for (const t of s.titles) { const i = STAGE_ORDER.indexOf(t.stageSlug); if (i >= 0) (onStage[i] = onStage[i] || []).push(t.slug); }
-    for (const t of s.titles) {
-      const p = pawns[t.slug]; if (!p) continue;
-      const i = STAGE_ORDER.indexOf(t.stageSlug);
-      if (i < 0) { p.g.visible = false; p.stage = null; continue; }
-      const target = pawnSlot(i, onStage[i].indexOf(t.slug), onStage[i].length);
-      const from = p.stage;
-      p.stage = i; p.g.visible = true;
-      if (first || from == null || from === i) { if (!p.moving) p.g.position.copy(target); continue; }
-      // Walk the track space by space, the short way round (Retired and Concept are neighbours).
-      const fwd = (i - from + 10) % 10, step = fwd <= 5 ? 1 : -1, n2 = fwd <= 5 ? fwd : 10 - fwd;
-      const pts = [p.g.position.clone()];
-      for (let k = 1; k < n2; k++) pts.push(spaceCenter((from + step * k + 10) % 10));
-      pts.push(target);
-      p.moving = true; p.slides++;
-      tween(0.5 * n2, (k) => {
-        const f = k * n2, seg = Math.min(Math.floor(f), n2 - 1);
-        p.g.position.lerpVectors(pts[seg], pts[seg + 1], ease(f - seg));
-      }, 0, () => { p.moving = false; p.g.position.copy(target); pawnSpaces(); });
-    }
-    pawnSpaces(); // the space under each pawn is lit (a sliding pawn lights its new space on arrival)
 
     // Orders: today's coins stacked in front of the shop, oldest at the bottom. A new order pops out of the shop door.
     const list = [...s.todayOrders].reverse(), ids = new Set(list.map((o) => o.id));
@@ -707,18 +641,17 @@ export function createBoard3D(host, World, onPick) {
 
   // ---------- For tests and the perf note ----------
   function screenOf(kind, id) {
-    const o = kind === "district" ? tiles[id].b.g : kind === "title" ? pawns[id].g : kind === "agent" ? meeples[id].g : kind === "stage" ? spaces.find((x) => x.slug === id).g : runGroup;
+    const o = kind === "district" ? tiles[id].b.g : kind === "agent" ? meeples[id].g : kind === "founder" ? founder.g : kind === "space" ? spaces[+id].g : runGroup;
     const v = new THREE.Vector3(); o.getWorldPosition(v);
-    if (kind === "agent") v.y += 0.25; if (kind === "title") v.y += 0.12; if (kind === "run") v.y += 0.05; if (kind === "district") v.y += 0.2;
-    if (kind === "stage") { const r = spaceRect(STAGE_ORDER.indexOf(id)); v.x -= r.w / 2 - 0.3; v.z += r.side ? r.d / 2 - 0.3 : r.d / 2 - 0.25; v.y += SPACE_H; }
+    if (kind === "agent") v.y += 0.25; if (kind === "founder") v.y += 0.15; if (kind === "run") v.y += 0.05; if (kind === "district") v.y += 0.2; if (kind === "space") v.y += SPACE_H;
     v.project(camera); const b = canvas.getBoundingClientRect();
     return { x: b.left + (v.x + 1) / 2 * b.width, y: b.top + (1 - v.y) / 2 * b.height };
   }
   function debug() {
     return {
       tiles: Object.fromEntries(Object.values(tiles).map((t) => [t.slug, { level: t.level, flips: t.flips, lights: t.lights, shut: t.shut, shutters: t.b.shut.length, lantern: t.lantern, parts: t.b.g.children.length }])),
-      pawns: Object.fromEntries(Object.entries(pawns).map(([k, p]) => [k, { stage: p.stage == null ? null : STAGE_ORDER[p.stage], visible: p.g.visible, moving: p.moving, slides: p.slides, x: +p.g.position.x.toFixed(2), z: +p.g.position.z.toFixed(2) }])),
-      litSpaces: spaces.filter((sp) => sp.on).map((sp) => sp.slug), arrows: arrows.length,
+      founder: { pos: founder.pos, moving: founder.moving, walks: founder.walks, x: +founder.g.position.x.toFixed(2), z: +founder.g.position.z.toFixed(2) },
+      spaces: spaces.length, litSpaces: spaces.filter((sp) => sp.on).map((sp) => sp.i), arrows: arrows.length,
       tokens: tokens.size, tokensFalling: [...tokens.values()].filter((m) => m.userData.falling).length, pops,
       salesSign: sales.text, smoke: ambient.smoke, spot: ambient.spot,
       ship: { visible: ship.g.visible, milestone: ship.milestone, x: +ship.g.position.x.toFixed(2), eta: ship.eta, flag: ship.flag.visible, moves: ship.moves },
@@ -729,7 +662,7 @@ export function createBoard3D(host, World, onPick) {
   }
 
   return {
-    update, debug, screenOf,
+    update, debug, screenOf, setFounder, walkFounder,
     setInset(right, bottom) { if (right === inset.right && bottom === inset.bottom) return; inset = { right, bottom }; resize(); },
     dispose() {
       disposed = true; cancelAnimationFrame(raf); ro.disconnect();

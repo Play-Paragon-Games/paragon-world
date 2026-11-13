@@ -1,7 +1,7 @@
 # Paragon World
 
 Live, read-only pages for Paragon Games. `board.html` is the board view (Phase 4; 3D by default via `board3d.js` and the vendored three.js in `vendor/`, with a Flat toggle; districts are small buildings, Your move is a fanned hand of cards) and `index.html` the plain
-fallback page (Phase 3); both share `world.js` (reference data, compute, live loop). GitHub Pages serves them and they poll the
+fallback page (Phase 3); both share `world.js` (reference data, compute, live loop). `game.js` is the game layer (Kyle's track, rolls, laps): it only reads the computed state and keeps its own state in the browser's localStorage; it never writes business data. GitHub Pages serves them and they poll the
 `world` Supabase Edge Function (source in `supabase/functions/world/`) every 15 seconds while the tab is visible.
 
 Both pages need a key in the URL fragment: `https://play-paragon-games.github.io/paragon-world/board.html#k=<WORLD_VIEW_KEY>`.

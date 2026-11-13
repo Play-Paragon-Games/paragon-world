@@ -19,7 +19,7 @@ const DISTRICTS = [
   ["agent-hq","Agent HQ","agents"],
 ];
 const TITLES = [["status","Status: A Victorian Affair"],["trade-and-triumph","Trade and Triumph"],["catacombes-de-paris","Catacombes de Paris"]];
-const STAGES = {concept:"Concept",prototype:"Prototype",playtesting:"Playtesting",art:"Art & graphic design",rulebook:"Rulebook & localization",manufacturing:"Manufacturing",freight:"Freight",launch:"Launch",evergreen:"Evergreen",retired:"Retired"};
+const STAGES = {concept:"Concept",prototype:"Prototype",playtesting:"Playtesting",art:"Art & graphic design",rulebook:"Rulebook & localization",manufacturing:"Manufacturing",freight:"Freight",launch:"Launch",evergreen:"On sale",retired:"Retired"};
 const STAGE_ORDER = ["concept","prototype","playtesting","art","rulebook","manufacturing","freight","launch","evergreen","retired"];
 const AGENTS = [["claude","Claude"],["chatgpt","ChatGPT / Codex"],["grokbot","Grokbot"]];
 const CHANNELS = [["shopify","Shopify"],["amazon","Amazon"]];
@@ -197,15 +197,15 @@ function compute(data){
   // agents waiting or blocked, districts at warn or bad, stale manual lines, ROAS gate at step down.
   // Marketing gets one card (its color is the ROAS gate), and Agent HQ none (the agents have their own).
   const hand = [];
-  for (const a of needAgents) hand.push({kind:"agent", id:a.slug, level:a.level, place:"agent-hq", title:a.name, tag:a.state, text:a.needs || a.text, age:a.age});
+  for (const a of needAgents) hand.push({kind:"agent", id:a.slug, eid:a.event.id, t:a.event.t, level:a.level, place:"agent-hq", title:a.name, tag:a.state, text:a.needs || a.text, age:a.age});
   for (const d of districts){
     if (d.slug === "agent-hq") continue;
     if (d.kind === "roas"){
-      if (meta && (d.level === "warn" || d.level === "bad")) hand.push({kind:"roas", id:d.slug, level:d.level, place:d.slug, title:"Marketing", tag: d.level === "bad" ? "step down" : "hold", text:"7-day ROAS " + meta.roas.toFixed(2) + (d.level === "bad" ? ", below 1.6" : meta.roas < 2.2 ? ", between 1.6 and 2.2" : ", but " + money(meta.cpv) + " per view"), age:null});
+      if (meta && (d.level === "warn" || d.level === "bad")) hand.push({kind:"roas", id:d.slug, dkind:d.kind, level:d.level, place:d.slug, title:"Marketing", tag: d.level === "bad" ? "step down" : "hold", text:"7-day ROAS " + meta.roas.toFixed(2) + (d.level === "bad" ? ", below 1.6" : meta.roas < 2.2 ? ", between 1.6 and 2.2" : ", but " + money(meta.cpv) + " per view"), age:null});
     } else if (d.kind === "manual" && d.stale){
-      hand.push({kind:"stale", id:d.slug, level:"gray", place:d.slug, title:d.name, tag:"stale line", text: d.age === null ? "No status line yet" : "Last update " + ago(d.age) + (d.sentLevel === "warn" || d.sentLevel === "bad" ? " (was " + d.sentLevel + "): " : ": ") + d.text, age:d.age});
+      hand.push({kind:"stale", id:d.slug, dkind:d.kind, eid:d.event ? d.event.id : null, level:"gray", place:d.slug, title:d.name, tag:"stale line", text: d.age === null ? "No status line yet" : "Last update " + ago(d.age) + (d.sentLevel === "warn" || d.sentLevel === "bad" ? " (was " + d.sentLevel + "): " : ": ") + d.text, age:d.age});
     } else if (d.level === "warn" || d.level === "bad"){
-      hand.push({kind:"district", id:d.slug, level:d.level, place:d.slug, title:d.name, tag:d.level, text:d.text, age:d.age});
+      hand.push({kind:"district", id:d.slug, dkind:d.kind, eid:d.event ? d.event.id : null, level:d.level, place:d.slug, title:d.name, tag:d.level, text:d.text, age:d.age});
     }
   }
   const rank = {bad:0, warn:1, gray:2};

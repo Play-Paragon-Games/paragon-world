@@ -45,17 +45,15 @@ h1 span{color:var(--muted);font-weight:500}
 
 /* ---------- Board ---------- */
 .board{background:var(--board);border:2px solid var(--edge);border-radius:18px;padding:10px;display:flex;flex-direction:column;gap:8px}
-.track-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.mid{display:grid;grid-template-columns:104px minmax(0,1fr) 104px;gap:8px}
-.space{position:relative;border:1.5px solid var(--edge);border-radius:10px;background:var(--card);min-height:86px;padding:6px 8px;display:flex;flex-direction:column;gap:4px}
-.space .n{font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
-.space .nm{font-size:12px;font-weight:600;line-height:1.2}
-.space .dir{position:absolute;right:7px;top:5px;font-size:12px;color:var(--edge)}
-.space .pawns{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
-.space.has{border-color:var(--ink)}
-.space.side{min-height:0}
-.pawn{display:flex;flex-direction:column;align-items:center;gap:1px;font-size:10px;color:var(--muted);line-height:1.1;text-align:center}
-.pawn svg{width:38px;height:38px;display:block}
+.track-row{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.mid{display:grid;grid-template-columns:72px minmax(0,1fr) 72px;gap:8px}
+.track-col{display:flex;flex-direction:column;gap:6px}
+.space{position:relative;border:1.5px solid #3a2a1e;border-radius:8px;background:#5a4029;min-height:46px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:1}
+.space:nth-child(even){background:#523a25}
+.space.start{background:#c9a45c;border-color:#8a6a2c}
+.space.start::before{content:"START";position:absolute;left:6px;top:4px;font-size:9px;font-weight:800;letter-spacing:.08em;color:#3a2a1e}
+.space.has{background:#f0c66a;border-color:#8a6a2c}
+.space .crown{width:34px;height:34px;display:block}
 
 .tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .tile{position:relative;text-align:left;border:1.5px solid var(--line);border-radius:10px;background:var(--card);padding:10px 10px 8px;min-height:128px;display:flex;flex-direction:column;gap:4px;cursor:pointer;overflow:hidden}
@@ -110,6 +108,15 @@ h1 span{color:var(--muted);font-weight:500}
 .mat.tnt{background:#1f4a3a;color:#f0e6c8;border:1px solid #c7a548;padding:10px 14px}
 .mat.tnt .hd svg{width:36px;height:36px}
 .mat.tnt .ttl{font-size:14px}
+
+.mtrack{position:relative;display:grid;grid-template-columns:repeat(10,1fr);gap:3px;margin-top:10px;padding-top:26px}
+.mtrack i{height:6px;border-radius:3px;background:rgba(255,255,255,.2)}
+.mtrack i.past{background:rgba(255,255,255,.45)}
+.mtrack i.on{background:#fff}
+.mpawn{position:absolute;top:0;width:24px;height:24px;margin-left:-12px;transition:left .8s ease}
+.mpawn svg{width:24px !important;height:24px !important;background:#f3ecdc;border-radius:50%;padding:2px !important;display:block}
+.mstage{font-size:11px;opacity:.85;margin-top:5px}
+@media (prefers-reduced-motion: reduce){.mpawn{transition:none}}
 
 /* ---------- Your move ---------- */
 .hand-wrap{margin-top:20px;overflow-x:clip}
@@ -199,6 +206,20 @@ body.v3d .hand-wrap{position:absolute;left:12px;right:316px;bottom:0;margin:0;po
 .discard b{font-size:24px;line-height:1}
 .discard.has{border:1px solid #1e150f;background:repeating-linear-gradient(45deg,#5a1a2e 0 8px,#6b2238 8px 16px);color:#f3e7cf;box-shadow:2px -2px 0 #3d1220,0 3px 10px rgba(0,0,0,.3)}
 body.v3d .discard{color:#cdbfae}
+/* ---------- The game: die, rolls, laps ---------- */
+.gamebox{position:absolute;right:122px;bottom:14px;width:92px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12px;color:var(--muted);pointer-events:auto}
+.gamebox b{color:var(--ink);font-size:14px}
+.die{width:58px;height:58px;border-radius:12px;border:1.5px solid #bda97f;background:#fffaf0;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:8px;gap:2px;cursor:pointer;box-shadow:0 3px 8px rgba(0,0,0,.25);margin-bottom:3px}
+.die i{border-radius:50%;place-self:center;width:9px;height:9px;background:transparent}
+.die i.on{background:#231a12}
+.die:disabled{opacity:.45;cursor:default;box-shadow:none}
+.die:not(:disabled){outline:3px solid #e2b93b;outline-offset:2px}
+.die.rolling{animation:shake .14s linear infinite}
+@keyframes shake{0%{transform:rotate(-14deg) translateY(-3px)}50%{transform:rotate(12deg) translateY(2px)}100%{transform:rotate(-14deg) translateY(-3px)}}
+body.v3d .gamebox{right:104px;bottom:8px;color:#cdbfae}
+body.v3d .gamebox b{color:#fff}
+.toast{position:fixed;left:50%;top:64px;transform:translateX(-50%);background:#231a12;color:#fbf3df;border:1px solid #c9a45c;border-radius:999px;padding:8px 16px;font-size:14px;z-index:300;display:none;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+@media (prefers-reduced-motion: reduce){.die.rolling{animation:none}}
 @media (prefers-reduced-motion: reduce){.pcard,.pc-in{transition:none}}
 
 @media (max-width:1040px){.table{grid-template-columns:1fr}.mats{flex-direction:row;flex-wrap:wrap}.mats .mat{flex:1 1 280px}}
@@ -226,9 +247,9 @@ body.v3d .discard{color:#cdbfae}
     <div class="board" id="board" aria-label="Board">
       <div class="track-row" id="track-top"></div>
       <div class="mid">
-        <div class="track-col" id="track-left" style="display:flex"></div>
+        <div class="track-col" id="track-left"></div>
         <div class="tiles" id="tiles"></div>
-        <div class="track-col" id="track-right" style="display:flex"></div>
+        <div class="track-col" id="track-right"></div>
       </div>
       <div class="track-row" id="track-bottom"></div>
     </div>
@@ -237,15 +258,19 @@ body.v3d .discard{color:#cdbfae}
 
   <section class="hand-wrap" aria-label="Your move">
     <div class="hand-hd"><span class="label">Your move</span><span class="ct" id="hand-n">–</span></div>
-    <div class="hand" id="hand"><div class="discard" id="discard">Discard</div></div>
+    <div class="hand" id="hand">
+      <div class="gamebox" id="gamebox"><button class="die" id="die" disabled aria-label="Roll the die"></button><div><b id="g-rolls">0</b> rolls</div><div><b id="g-laps">0</b> laps</div></div>
+      <div class="discard" id="discard">Discard</div></div>
   </section>
   </div>
 </main>
 
+<div class="toast" id="toast" role="status"></div>
 <div class="scrim" id="scrim"></div>
 <aside class="panel" id="panel" aria-label="Details"><button class="x" id="panel-x" aria-label="Close">×</button><div id="panel-body"></div></aside>
 
 <script src="world.js"></script>
+<script src="game.js"></script>
 <script>
 (() => {
 "use strict";
@@ -261,23 +286,19 @@ const PAWN = {
   // Trade and Triumph: a merchant's coin token.
   "trade-and-triumph": `<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="#c7a548" stroke="#1f4a3a" stroke-width="2.5"/><circle cx="20" cy="20" r="11.5" fill="none" stroke="#1f4a3a" stroke-width="1.2"/><g stroke="#1f4a3a" stroke-width="1.8" fill="none" stroke-linecap="round"><line x1="20" y1="12" x2="20" y2="28"/><line x1="13" y1="15" x2="27" y2="15"/><path d="M10.5 21a2.8 2.8 0 0 0 5.6 0l-2.8-6z"/><path d="M23.900 21a2.8 2.8 0 0 0 5.600 0l-2.800-6z"/><line x1="16" y1="28" x2="24" y2="28"/></g></svg>`,
 };
-const SHORT = {"status":"Status","catacombes-de-paris":"Catacombes","trade-and-triumph":"T&T"};
+const CROWN = `<svg class="crown" viewBox="0 0 40 40" aria-hidden="true"><ellipse cx="20" cy="33" rx="14" ry="4" fill="#1c1b19"/><path d="M7 30l-2-17 8 7 7-11 7 11 8-7-2 17z" fill="#d9b24a" stroke="#1c1b19" stroke-width="1.6" stroke-linejoin="round"/><circle cx="20" cy="24" r="2.6" fill="#7a1f34"/></svg>`;
 const meeple = (flag) => `<svg viewBox="0 0 24 30" aria-hidden="true">${flag ? `<line class="pole" x1="19" y1="1" x2="19" y2="13"/><path class="flag" d="M19 1l-8 3 8 3z"/>` : ""}<path class="body" d="M12 8a4 4 0 0 1 4 4c0 1-.3 1.8-.9 2.5C19 15.500 22 17 22 19c0 1-1 1.500-2 1.300l-3-.8 2.500 7.500H14l-2-4-2 4H4.500L7 19.500l-3 .8c-1 .2-2-.3-2-1.300 0-2 3-3.500 6.900-4.500C8.300 13.800 8 13 8 12a4 4 0 0 1 4-4z"/></svg>`;
 
-// ---------- Track: 10 spaces clockwise, Retired next to Concept ----------
-// Top row left to right: 1-4. Right side: 5. Bottom row right to left: 6-9. Left side: 10.
-function spaceHtml(slug, s, dir){
-  const i = STAGE_ORDER.indexOf(slug);
-  const here = s.titles.filter(t => t.stageSlug === slug);
-  return `<div class="space ${here.length ? "has" : ""} ${dir === "↓" || dir === "↑" ? "side" : ""}" data-stage="${slug}" style="flex:1">
-    <span class="n">${i + 1}</span><span class="dir">${dir}</span><span class="nm">${esc(STAGES[slug])}</span>
-    <div class="pawns">${here.map(t => `<div class="pawn" data-title="${t.slug}" data-pick="title:${t.slug}" title="${esc(t.name)}: ${esc(t.stage)}">${PAWN[t.slug] || ""}<span>${esc(SHORT[t.slug] || t.name)}</span></div>`).join("")}</div></div>`;
-}
-function renderTrack(s){
-  $("track-top").innerHTML = STAGE_ORDER.slice(0, 4).map(g => spaceHtml(g, s, "→")).join("");
-  $("track-right").innerHTML = spaceHtml(STAGE_ORDER[4], s, "↓");
-  $("track-bottom").innerHTML = STAGE_ORDER.slice(5, 9).reverse().map(g => spaceHtml(g, s, "←")).join("");
-  $("track-left").innerHTML = spaceHtml(STAGE_ORDER[9], s, "↑");
+// ---------- Kyle's track: 20 plain spaces clockwise. 0 is Start (top left). ----------
+// Top row 0-6 left to right, right side 7-9 downward, bottom row 10-16 right to left, left side 17-19 upward.
+let shownPos = Game.state().pos; // where the pawn is drawn; it steps toward the saved position after a roll
+function renderRing(){
+  const cell = (i) => `<div class="space ${i === 0 ? "start" : ""} ${i === shownPos ? "has" : ""}" data-space="${i}" data-pick="founder:me">${i === shownPos ? CROWN : ""}</div>`;
+  const run = (ids) => ids.map(cell).join("");
+  $("track-top").innerHTML = run([0, 1, 2, 3, 4, 5, 6]);
+  $("track-right").innerHTML = run([7, 8, 9]);
+  $("track-bottom").innerHTML = run([16, 15, 14, 13, 12, 11, 10]);
+  $("track-left").innerHTML = run([19, 18, 17]);
 }
 
 // ---------- District tiles ----------
@@ -312,6 +333,11 @@ function renderTiles(s){
 // ---------- Title mats ----------
 function renderMats(s){
   const by = Object.fromEntries(s.titles.map(t => [t.slug, t]));
+  // A small 10-step stage track on each mat, with the title's pawn on its current stage.
+  const track = (t) => {
+    const i = STAGE_ORDER.indexOf(t.stageSlug);
+    return `<div class="mtrack" data-title="${t.slug}" data-stage="${t.stageSlug || ""}" role="img" aria-label="${i < 0 ? "No stage yet" : "Stage " + (i + 1) + " of 10: " + esc(t.stage)}">${STAGE_ORDER.map((g, k) => `<i class="${k === i ? "on" : k < i ? "past" : ""}" title="${k + 1}. ${esc(STAGES[g])}"></i>`).join("")}${i < 0 ? "" : `<span class="mpawn" style="left:${(i + 0.5) * 10}%">${PAWN[t.slug]}</span>`}</div><div class="mstage">${i < 0 ? "No stage yet" : (i + 1) + " of 10 · " + esc(t.stage)}</div>`;
+  };
   const upd = (t) => t.age === null ? "No stage event yet" : "Stage set " + ago(t.age) + " · " + new Date(t.event.t).toLocaleDateString("en-US", {timeZone: LA, month: "short", day: "numeric"});
   const st = by["status"], r = s.statusRun;
   let statusBody = `<div class="of" style="margin-top:12px">No base-game total from the world function yet.</div>`;
@@ -329,11 +355,21 @@ function renderMats(s){
   }
   const ca = by["catacombes-de-paris"], tt = by["trade-and-triumph"];
   $("mats").innerHTML = `
-    <div class="mat status" data-mat="status" data-pick="title:status"><div class="hd">${PAWN["status"]}<div><div class="ttl">Status: A Victorian Affair</div><div class="stg">${esc(st.stage)}</div></div></div>${statusBody}<div class="upd">${upd(st)}</div></div>
-    <div class="mat cata" data-mat="catacombes-de-paris" data-pick="title:catacombes-de-paris"><div class="hd">${PAWN["catacombes-de-paris"]}<div><div class="ttl">Catacombes de Paris</div><div class="stg">Bone cart on the track</div></div></div>
-      <div class="rows"><div class="r"><span>Stage</span><b>${esc(ca.stage)}</b></div><div class="r"><span>Last update</span><b>${ca.age === null ? "none yet" : ago(ca.age)}</b></div></div><div class="upd">${upd(ca)}</div></div>
-    <div class="mat tnt" data-mat="trade-and-triumph" data-pick="title:trade-and-triumph"><div class="hd">${PAWN["trade-and-triumph"]}<div><div class="ttl">Trade and Triumph</div><div class="stg">${esc(tt.stage)} · ${tt.age === null ? "no update yet" : "updated " + ago(tt.age)}</div></div></div></div>`;
+    <div class="mat status" data-mat="status" data-pick="title:status"><div class="hd">${PAWN["status"]}<div><div class="ttl">Status: A Victorian Affair</div><div class="stg">${esc(st.stage)}</div></div></div>${track(st)}${statusBody}<div class="upd">${upd(st)}</div></div>
+    <div class="mat cata" data-mat="catacombes-de-paris" data-pick="title:catacombes-de-paris"><div class="hd">${PAWN["catacombes-de-paris"]}<div><div class="ttl">Catacombes de Paris</div><div class="stg">${esc(ca.stage)}</div></div></div>${track(ca)}
+      <div class="rows"><div class="r"><span>Last update</span><b>${ca.age === null ? "none yet" : ago(ca.age)}</b></div></div><div class="upd">${upd(ca)}</div></div>
+    <div class="mat tnt" data-mat="trade-and-triumph" data-pick="title:trade-and-triumph"><div class="hd">${PAWN["trade-and-triumph"]}<div><div class="ttl">Trade and Triumph</div><div class="stg">${esc(tt.stage)} · ${tt.age === null ? "no update yet" : "updated " + ago(tt.age)}</div></div></div>${track(tt)}</div>`;
+  // A pawn slides along its mat track only when the title's stage really changed.
+  for (const t of s.titles){
+    const i = STAGE_ORDER.indexOf(t.stageSlug), was = matStage[t.slug];
+    if (was !== undefined && was !== i && was >= 0 && i >= 0){
+      const el = document.querySelector(`.mtrack[data-title="${t.slug}"] .mpawn`);
+      if (el){ matSlides++; el.style.transition = "none"; el.style.left = (was + 0.5) * 10 + "%"; el.getBoundingClientRect(); el.style.transition = ""; el.style.left = (i + 0.5) * 10 + "%"; }
+    }
+    matStage[t.slug] = i;
+  }
 }
+const matStage = {}; let matSlides = 0;
 
 // ---------- Your move ----------
 // One card per thing waiting on Kyle, with a symbol per type. All stale lines share one pile.
@@ -347,15 +383,15 @@ const SYM = {
   stale: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 8.500V13l3 2M9 2.500h6" stroke-dasharray="0"/><path d="M19.500 4.500l1.500 1.500" /></svg>`,
 };
 const TYPE_LABEL = {waiting:"Waiting on you", blocked:"Blocked", hold:"Hold", stepdown:"Step down", warn:"Warn", bad:"Bad", stale:"Stale"};
-function handCards(s){
+function handCards(s, gcards){
   const cards = [], stale = [];
-  for (const c of s.hand){
-    if (c.kind === "stale") { stale.push(c); continue; }
+  s.hand.forEach((c, i) => {
+    const item = gcards[i].key; // changes when the underlying agent status or district line changes
+    if (c.kind === "stale") { stale.push({...c, item}); return; }
     const type = c.kind === "agent" ? (c.tag === "blocked" ? "blocked" : "waiting") : c.kind === "roas" ? (c.level === "bad" ? "stepdown" : "hold") : c.level === "bad" ? "bad" : "warn";
-    const item = c.kind === "agent" ? "agent:" + c.id : "place:" + c.id;
-    cards.push({key: item, type, level: c.level, title: c.title, text: c.text, age: c.age, pick: c.kind === "agent" ? "agent:" + c.id : "district:" + c.id, items: [item]});
-  }
-  if (stale.length) cards.push({key: "pile:stale", type: "stale", level: "gray", title: stale.length === 1 ? "1 stale line" : stale.length + " stale lines", text: "No update in 7 days: " + stale.map(c => c.title).join(", "), stale, items: stale.map(c => "place:" + c.id)});
+    cards.push({key: c.kind === "agent" ? "agent:" + c.id : "place:" + c.id, type, level: c.level, title: c.title, text: c.text, age: c.age, pick: c.kind === "agent" ? "agent:" + c.id : "district:" + c.id, items: [item]});
+  });
+  if (stale.length) cards.push({key: "pile:stale", type: "stale", level: "gray", title: stale.length === 1 ? "1 stale line" : stale.length + " stale lines", text: "No update in 7 days: " + stale.map(c => c.title).join(", "), stale, items: stale.map(c => c.item)});
   return cards;
 }
 function cardHtml(c){
@@ -367,35 +403,37 @@ function cardHtml(c){
     <div class="pc-face pc-front">${corner}${c.type === "stale" ? `<span class="pc-count">${c.stale.length}</span>` : ""}<div class="pc-sym">${SYM[c.type]}</div><div class="pc-title">${esc(c.title)}</div><div class="pc-text">${esc(c.text)}</div></div>
     <div class="pc-face pc-back">${corner}${back}</div></div>`;
 }
-const handEls = new Map(); let handItems = null, handOrder = [], flippedKey = null, discardN = 0;
+const handEls = new Map(); let handItems = null, handOrder = [], flippedKey = null;
 const calm = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 function layoutHand(){
-  const n = handOrder.length, room = $("hand").clientWidth - 150 - 120, gap = Math.min(132, Math.max(54, room / Math.max(1, n - 1)));
-  handOrder.forEach((key, i) => { const el = handEls.get(key), o = i - (n - 1) / 2; el.style.setProperty("--x", (o * gap).toFixed(1) + "px"); el.style.setProperty("--r", (o * 4).toFixed(1) + "deg"); el.style.setProperty("--y", (o * o * 3).toFixed(1) + "px"); el.style.zIndex = 10 + i; });
+  const n = handOrder.length, room = $("hand").clientWidth - 150 - 230, gap = Math.min(132, Math.max(54, room / Math.max(1, n - 1)));
+  handOrder.forEach((key, i) => { const el = handEls.get(key), o = i - (n - 1) / 2; el.style.setProperty("--x", (o * gap - 55).toFixed(1) + "px"); el.style.setProperty("--r", (o * 4).toFixed(1) + "deg"); el.style.setProperty("--y", (o * o * 3).toFixed(1) + "px"); el.style.zIndex = 10 + i; });
 }
-// A card whose reason is gone flies to the discard pile. The pile counts what was resolved since the page opened.
+function showDiscard(){ const n = Game.state().played, d = $("discard"); d.classList.toggle("has", n > 0); d.innerHTML = n > 0 ? `<b>${n}</b>played` : "Discard"; }
+// A played card (its real condition cleared) flies to the discard pile.
 function flyToDiscard(src){
-  const d = $("discard"); discardN++; const n = discardN;
-  const land = () => { d.classList.add("has"); d.innerHTML = `<b>${Math.max(n, +d.dataset.n || 0)}</b>resolved`; d.dataset.n = Math.max(n, +d.dataset.n || 0); };
-  if (!src || calm || !src.animate) { land(); return; }
-  const a = src.getBoundingClientRect(), b = d.getBoundingClientRect(), g = src.cloneNode(true);
+  if (!src || calm || !src.animate) return;
+  const d = $("discard"), a = src.getBoundingClientRect(), b = d.getBoundingClientRect(), g = src.cloneNode(true);
   g.classList.remove("flipped"); g.classList.add("ghost"); g.removeAttribute("data-key");
   g.style.cssText = `position:fixed;left:${a.left + a.width / 2 - 75}px;top:${a.top + a.height / 2 - 104}px;bottom:auto;margin:0;transform:none;transition:none;z-index:200;pointer-events:none`;
   document.body.appendChild(g);
   const dx = b.left + b.width / 2 - (a.left + a.width / 2), dy = b.top + b.height / 2 - (a.top + a.height / 2);
-  g.animate([{transform: "none"}, {transform: `translate(${dx}px,${dy}px) rotate(180deg) scale(${(b.width / 150).toFixed(2)})`}], {duration: 750, easing: "cubic-bezier(.4,0,.2,1)"}).onfinish = () => { g.remove(); land(); };
+  g.animate([{transform: "none"}, {transform: `translate(${dx}px,${dy}px) rotate(180deg) scale(${(b.width / 150).toFixed(2)})`}], {duration: 750, easing: "cubic-bezier(.4,0,.2,1)"}).onfinish = () => g.remove();
 }
-function renderHand(s){
+function toast(text){ const t = $("toast"); t.textContent = text; t.style.display = "block"; clearTimeout(toast.timer); toast.timer = setTimeout(() => { t.style.display = "none"; }, 6000); }
+// res = Game.reconcile(s): which cards were played (cleared for real) since the hand was last seen, here or on an earlier visit.
+function renderHand(s, res){
   $("hand-n").textContent = s.hand.length;
-  const cards = handCards(s), host = $("hand"), items = new Map();
+  const cards = handCards(s, res.cards), host = $("hand"), items = new Map();
   for (const c of cards) for (const it of c.items) items.set(it, c.key);
-  if (handItems) for (const [it, key] of handItems) if (!items.has(it)) flyToDiscard(handEls.get(key));
+  for (const p of res.played) flyToDiscard(handItems ? handEls.get(handItems.get(p.key)) : null);
+  if (res.played.length && !handItems) toast(res.played.length === 1 ? `1 card cleared while you were away (${res.played[0].title}). +1 roll.` : `${res.played.length} cards cleared while you were away. +${res.played.length} rolls.`);
   for (const [key, el] of handEls) if (!cards.some(c => c.key === key)) { el.remove(); handEls.delete(key); if (flippedKey === key) flippedKey = null; }
   handOrder = cards.map(c => c.key);
   const dealt = [];
   for (const c of cards){
     let el = handEls.get(c.key);
-    if (!el){ el = document.createElement("div"); el.tabIndex = 0; el.setAttribute("role", "button"); el.dataset.key = c.key; host.insertBefore(el, $("discard")); handEls.set(c.key, el); if (handItems) dealt.push(el); }
+    if (!el){ el = document.createElement("div"); el.tabIndex = 0; el.setAttribute("role", "button"); el.dataset.key = c.key; host.insertBefore(el, $("gamebox")); handEls.set(c.key, el); if (handItems) dealt.push(el); }
     const html = cardHtml(c);
     if (el._html !== html){ el.innerHTML = html; el._html = html; }
     el.className = "pcard " + c.level + (c.type === "stale" ? " pile" : "") + (flippedKey === c.key ? " flipped" : "");
@@ -404,7 +442,43 @@ function renderHand(s){
   layoutHand();
   if (!calm) for (const el of dealt) if (el.animate) el.animate([{transform: `translateX(${el.style.getPropertyValue("--x")}) translateY(260px)`}, {}], {duration: 450, easing: "cubic-bezier(.2,.8,.3,1)"}); // a new card is dealt in
   handItems = items;
+  showGame();
 }
+
+// ---------- The die: one roll per played card. The pawn walks what it lands on. ----------
+const PIPS = {1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8]};
+let busy = false, lastRoll = null;
+function drawDie(n){ $("die").innerHTML = Array.from({length: 9}, (_, i) => `<i class="${PIPS[n].includes(i) ? "on" : ""}"></i>`).join(""); $("die").dataset.n = n; }
+function showGame(){
+  const g = Game.state();
+  $("g-rolls").textContent = g.rolls; $("g-laps").textContent = g.laps;
+  $("die").disabled = busy || g.rolls < 1;
+  $("die").title = g.rolls < 1 ? "No rolls yet. A roll comes from a card that clears." : "Roll (" + g.rolls + " available)";
+  showDiscard();
+  if (open && open.kind === "founder") openPanel("founder", "me");
+}
+function rollDie(){
+  if (busy) return;
+  const r = Game.roll(); if (!r) return; // already saved: closing the page mid-roll loses nothing
+  busy = true; lastRoll = r; showGame();
+  const land = () => { $("die").classList.remove("rolling"); drawDie(r.n); walk(r); };
+  if (calm) { land(); return; }
+  $("die").classList.add("rolling"); let k = 0;
+  const iv = setInterval(() => { drawDie(1 + Math.floor(Math.random() * 6)); if (++k >= 11) { clearInterval(iv); land(); } }, 70);
+}
+function walk(r){
+  if (scene3d) scene3d.walkFounder(r.n);
+  let left = r.n;
+  const step = () => {
+    shownPos = (shownPos + 1) % Game.SPACES; renderRing();
+    if (--left > 0) setTimeout(step, calm ? 0 : 300);
+    else { busy = false; showGame(); if (r.lap) toast("You passed Start. Lap " + Game.state().laps + "."); }
+  };
+  setTimeout(step, calm ? 0 : 300);
+}
+drawDie(1);
+$("die").addEventListener("click", rollDie);
+
 function flipCard(el){
   const key = el.dataset.key; flippedKey = flippedKey === key ? null : key;
   for (const [k, e] of handEls) e.classList.toggle("flipped", k === flippedKey);
@@ -471,17 +545,18 @@ function runHtml(s){
   const r = s.statusRun;
   return `<h2>Status run 1</h2><div class="sub">Printing at Sky Game. Each box on the table is 100 copies still unspoken for.</div>${r ? kvRows(runRows(r)) : `<div class="empty">No base-game total from the world function yet.</div>`}`;
 }
-function stageHtml(slug, s){
-  const i = STAGE_ORDER.indexOf(slug), here = s.titles.filter(t => t.stageSlug === slug);
-  return `<h2>${i + 1}. ${esc(STAGES[slug])}</h2><div class="sub">Space ${i + 1} of 10 on the title track.</div>
-    ${here.length ? kvRows(here.map(t => [esc(t.name), "here since " + ago(t.age)])) : `<div class="empty" style="margin-top:10px">No title on this space.</div>`}`;
+function founderHtml(){
+  const g = Game.state();
+  return `<h2>Your track</h2><div class="sub">A card is played when its real condition clears. Each played card adds one roll.</div>
+    ${kvRows([["Space", g.pos === 0 ? "Start" : g.pos + " of " + (Game.SPACES - 1) + " past Start"], ["Laps", g.laps], ["Rolls available", g.rolls], ["Cards played", g.played]])}
+    <div class="sub" style="margin-top:10px">Spaces do nothing yet. ${g.stored ? "Position, laps and rolls are saved in this browser only." : "This browser is not saving the game (a private window, or storage is blocked)."}</div>`;
 }
 function detailHtml(kind, id, s){
   if (kind === "district"){ const d = s.districts.find(x => x.slug === id); return d ? panelHtml(d, s) : null; }
   if (kind === "title"){ const t = s.titles.find(x => x.slug === id); return t ? titleHtml(t, s) : null; }
   if (kind === "agent"){ const a = s.agents.find(x => x.slug === id); return a ? agentHtml(a, s) : null; }
   if (kind === "run") return runHtml(s);
-  if (kind === "stage") return STAGE_ORDER.includes(id) ? stageHtml(id, s) : null;
+  if (kind === "founder") return founderHtml();
   return null;
 }
 function openPanel(kind, id){
@@ -532,6 +607,7 @@ async function setMode(m, save){
     const { createBoard3D } = await import("./board3d.js");
     if (mode !== "3d") return; // switched back while loading
     scene3d = createBoard3D($("stage3d"), World, openPanel);
+    scene3d.setFounder(Game.state().pos);
     if (last) { scene3d.update(last); fitInset(); }
   } catch (e) {
     // No WebGL, or the 3D code failed to load: the flat board is the same data.
@@ -544,7 +620,7 @@ $("v-3d").addEventListener("click", () => setMode("3d", true));
 $("v-flat").addEventListener("click", () => setMode("flat", true));
 window.addEventListener("resize", () => { fitInset(); layoutHand(); });
 $("view").addEventListener("scroll", () => { $("view").scrollTop = 0; $("view").scrollLeft = 0; }); // focusing a card must never scroll the scene
-window.__board = { scene: () => scene3d, mode: () => mode, discard: () => discardN, sound: () => ({ on: sound.on, played: sound.played, state: sound.ctx ? sound.ctx.state : null }) };
+window.__board = { scene: () => scene3d, mode: () => mode, discard: () => Game.state().played, game: () => ({ ...Game.state(), shownPos, busy, lastRoll, matSlides }), sound: () => ({ on: sound.on, played: sound.played, state: sound.ctx ? sound.ctx.state : null }) };
 
 // ---------- Sound: a soft chime per new order. Off unless switched on. ----------
 const sound = { on: false, ctx: null, played: 0 };
@@ -575,7 +651,7 @@ function chimeNewOrders(s){
 // ---------- Render ----------
 function render(s){
   last = s;
-  renderTrack(s); renderTiles(s); renderMats(s); renderHand(s); chimeNewOrders(s);
+  renderRing(); renderTiles(s); renderMats(s); renderHand(s, Game.reconcile(s)); chimeNewOrders(s);
   if (open) { const sc = $("panel").scrollTop; openPanel(open.kind, open.id); $("panel").scrollTop = sc; }
   if (scene3d) { scene3d.update(s); fitInset(); }
   firstRender = false;
